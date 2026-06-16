@@ -68,7 +68,17 @@ class AvatarResponse(BaseModel):
     name: str
     name_en: Optional[str]
     creator: Optional[str]
-    product_count: Optional[int]
+    product_count: Optional[int] = None
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    def model_post_init(self, __context):
+        if isinstance(self.product_count, list):
+            self.product_count = self.product_count[0].get("count", 0) if self.product_count else 0
 
 
 class AvatarListResponse(BaseModel):
