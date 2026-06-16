@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品詳細 | BOOTHDB</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/detail.css">
+    <link rel="stylesheet" href="css/modal.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- ヘッダー -->
+    <header class="site-header">
+        <div class="nav-container">
+            <a href="index.html" class="logo-group">
+                <div class="logo-icon">B</div>
+                <span class="logo-text">BOOTHDB</span>
+            </a>
+            <div class="nav-right">
+                <nav class="nav-links">
+                    <a href="index.html"  class="nav-item" id="nav-top">ポータル</a>
+                    <a href="detail.html" class="nav-item" id="nav-detail">商品分析</a>
+                    <a href="avatar.html" class="nav-item" id="nav-avatar">アバター別</a>
+                </nav>
+                <span class="nav-username" id="nav-username"></span>
+                <button class="nav-auth-btn nav-login-btn"  id="nav-login-btn">ログイン</button>
+                <button class="nav-auth-btn nav-logout-btn" id="nav-logout-btn">ログアウト</button>
+                <button class="theme-toggle-btn" id="theme-toggle-btn" title="テーマ切替" aria-label="テーマ切替">☀️</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+
+        <!-- パンくずリスト -->
+        <nav class="breadcrumb" aria-label="パンくずリスト">
+            <a href="index.html" class="breadcrumb-link">ポータル</a>
+            <span class="breadcrumb-sep">/</span>
+            <span class="breadcrumb-current" id="breadcrumb-product">読み込み中...</span>
+        </nav>
+
+        <!-- 商品ヘッダー -->
+        <article class="card-base detail-header">
+            <div class="detail-thumb" id="detail-thumb">読み込み中...</div>
+            <div class="detail-info">
+                <span class="detail-badge">価格追跡中 ✔</span>
+                <h1 class="detail-title" id="detail-title">読み込み中...</h1>
+                <p class="detail-creator">
+                    ブランド: <span class="detail-creator-link" id="detail-creator">-</span>
+                </p>
+            </div>
+            <div class="detail-checkout">
+                <span class="checkout-label">現在価格</span>
+                <div class="checkout-price" id="detail-price">-</div>
+                <a href="#" target="_blank" rel="noopener noreferrer" class="btn-primary" id="booth-link">
+                    BOOTH公式サイトで購入 ↗
+                </a>
+            </div>
+        </article>
+
+        <!-- 価格統計バー -->
+        <div class="card-base" style="padding: 1.25rem; margin-bottom: 2rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+            <div>
+                <div class="checkout-label">現在価格</div>
+                <div style="font-size: 1.2rem; font-weight: 900; color: var(--text-primary);" id="stat-current">-</div>
+            </div>
+            <div>
+                <div class="checkout-label">最安値</div>
+                <div style="font-size: 1.2rem; font-weight: 900; color: var(--color-secondary);" id="stat-lowest">-</div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;" id="stat-lowest-date"></div>
+            </div>
+            <div>
+                <div class="checkout-label">最高値</div>
+                <div style="font-size: 1.2rem; font-weight: 900; color: var(--text-primary);" id="stat-highest">-</div>
+            </div>
+        </div>
+
+        <!-- 2カラムレイアウト -->
+        <div class="detail-layout">
+
+            <!-- サイドバー -->
+            <aside class="detail-sidebar">
+
+                <!-- 対応アバター -->
+                <div class="card-base spec-card">
+                    <h2 class="spec-card-title">動作保証アバター</h2>
+                    <p class="spec-label" style="font-size: 0.75rem; margin-bottom: 0.75rem;">
+                        ※商品説明文から自動抽出されたアバター一覧です。
+                    </p>
+                    <div class="avatar-stack" id="avatar-stack">
+                        <div class="loading-spinner" style="padding: 1rem;">読み込み中...</div>
+                    </div>
+                </div>
+
+            </aside>
+
+            <!-- メインコンテンツ -->
+            <section class="detail-main">
+
+                <!-- 価格推移グラフ -->
+                <div class="card-base chart-card">
+                    <div class="chart-header">
+                        <h2 class="chart-title">過去の販売価格推移</h2>
+                        <p class="chart-desc">定期チェックによる価格変動ログ</p>
+                    </div>
+                    <div class="chart-viewport">
+                        <canvas id="price-chart" aria-label="価格推移グラフ" role="img"></canvas>
+                    </div>
+                </div>
+
+                <!-- レビュー一覧 -->
+                <div class="card-base reviews-card">
+                    <h2 class="chart-title" style="margin-bottom: 1rem;">口コミ・レビュー</h2>
+
+                    <div class="reviews-overview">
+                        <div class="reviews-avg-block">
+                            <div class="reviews-avg-num" id="review-avg">-</div>
+                            <div class="reviews-avg-stars">★★★★★</div>
+                            <div class="reviews-avg-count"><span id="review-count">0</span>件のレビュー</div>
+                        </div>
+                        <div class="distribution-bars">
+                            <div class="dist-row">
+                                <span class="dist-label">星5</span>
+                                <div class="dist-track"><div class="dist-fill" id="dist-fill-5" style="width: 0%;"></div></div>
+                                <span class="dist-pct" id="dist-pct-5">0%</span>
+                            </div>
+                            <div class="dist-row">
+                                <span class="dist-label">星4</span>
+                                <div class="dist-track"><div class="dist-fill" id="dist-fill-4" style="width: 0%;"></div></div>
+                                <span class="dist-pct" id="dist-pct-4">0%</span>
+                            </div>
+                            <div class="dist-row">
+                                <span class="dist-label">星3</span>
+                                <div class="dist-track"><div class="dist-fill" id="dist-fill-3" style="width: 0%;"></div></div>
+                                <span class="dist-pct" id="dist-pct-3">0%</span>
+                            </div>
+                            <div class="dist-row">
+                                <span class="dist-label">星2</span>
+                                <div class="dist-track"><div class="dist-fill" id="dist-fill-2" style="width: 0%;"></div></div>
+                                <span class="dist-pct" id="dist-pct-2">0%</span>
+                            </div>
+                            <div class="dist-row">
+                                <span class="dist-label">星1</span>
+                                <div class="dist-track"><div class="dist-fill" id="dist-fill-1" style="width: 0%;"></div></div>
+                                <span class="dist-pct" id="dist-pct-1">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- レビュー一覧 -->
+                    <div class="review-list" id="review-list">
+                        <div class="loading-spinner">読み込み中...</div>
+                    </div>
+                </div>
+
+                <!-- レビュー投稿フォーム -->
+                <div class="card-base review-form-card">
+                    <h2 class="chart-title" style="margin-bottom: 1rem;">レビューを投稿</h2>
+                    <form id="review-form">
+                        <div class="form-group">
+                            <label class="form-label" for="review-avatar-select">使用アバター（必須）</label>
+                            <select class="form-input" id="review-avatar-select" required>
+                                <option value="">アバターを選択</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">評価（必須）</label>
+                            <div class="star-rating-row">
+                                <button type="button" class="star-btn" data-rating="1">★</button>
+                                <button type="button" class="star-btn" data-rating="2">★</button>
+                                <button type="button" class="star-btn" data-rating="3">★</button>
+                                <button type="button" class="star-btn" data-rating="4">★</button>
+                                <button type="button" class="star-btn" data-rating="5">★</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="review-comment">コメント（任意）</label>
+                            <textarea class="form-input" id="review-comment" rows="3" placeholder="使用感やフィッティングのポイントなどを書いてみてください" style="resize: vertical;"></textarea>
+                        </div>
+                        <button type="submit" id="review-submit-btn" class="btn-primary">レビューを投稿</button>
+                    </form>
+                </div>
+
+            </section>
+        </div>
+
+    </main>
+
+    <!-- フッター -->
+    <footer class="site-footer">
+        <p>&copy; 2026 BOOTHDB. VRChat and BOOTH are trademarks of their respective owners.</p>
+        <p>当サイトは有志による非公式のファンプロジェクト、価格履歴トラッカーデータベースです。</p>
+    </footer>
+
+    <!-- 認証モーダル -->
+    <div class="modal-overlay" id="auth-modal" role="dialog" aria-modal="true">
+        <div class="modal-box">
+            <button class="modal-close-btn" aria-label="閉じる">✕</button>
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-login">ログイン</button>
+                <button class="auth-tab" id="tab-register">新規登録</button>
+            </div>
+            <form id="form-login">
+                <div class="form-group">
+                    <label class="form-label" for="login-email">メールアドレス</label>
+                    <input class="form-input" type="email" id="login-email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="login-password">パスワード</label>
+                    <input class="form-input" type="password" id="login-password" required>
+                </div>
+                <button type="submit" class="btn-primary form-submit-btn">ログイン</button>
+            </form>
+            <form id="form-register" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label" for="register-username">ユーザー名</label>
+                    <input class="form-input" type="text" id="register-username" minlength="2" maxlength="20" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="register-email">メールアドレス</label>
+                    <input class="form-input" type="email" id="register-email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="register-password">パスワード（8文字以上）</label>
+                    <input class="form-input" type="password" id="register-password" minlength="8" required>
+                </div>
+                <button type="submit" class="btn-primary form-submit-btn">登録する</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/detail.js"></script>
+</body>
+</html>

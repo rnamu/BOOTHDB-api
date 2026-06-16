@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOOTHDB - VRChat BOOTH データベース</title>
+    <meta name="description" content="VRChat向けBOOTH商品の価格履歴・対応アバター情報・レビューを閲覧できるデータベースサービス">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/top.css">
+    <link rel="stylesheet" href="css/modal.css">
+</head>
+<body>
+
+    <!-- ヘッダー -->
+    <header class="site-header">
+        <div class="nav-container">
+            <a href="index.html" class="logo-group">
+                <div class="logo-icon">B</div>
+                <span class="logo-text">BOOTHDB</span>
+            </a>
+            <div class="nav-right">
+                <nav class="nav-links">
+                    <a href="index.html"  class="nav-item" id="nav-top">ポータル</a>
+                    <a href="detail.html" class="nav-item" id="nav-detail">商品分析</a>
+                    <a href="avatar.html" class="nav-item" id="nav-avatar">アバター別</a>
+                </nav>
+                <span class="nav-username" id="nav-username"></span>
+                <button class="nav-auth-btn nav-login-btn"  id="nav-login-btn">ログイン</button>
+                <button class="nav-auth-btn nav-logout-btn" id="nav-logout-btn">ログアウト</button>
+                <button class="theme-toggle-btn" id="theme-toggle-btn" title="テーマ切替" aria-label="テーマ切替">☀️</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="main-content">
+
+        <!-- ヒーローバナー -->
+        <section class="hero-banner">
+            <h1 class="hero-title">VRChat向けBOOTH 総合データベース</h1>
+            <p class="hero-subtitle">リアルタイムの価格推移と各人気アバター対応の適合情報をトラッキング</p>
+
+            <div class="search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="search" id="search-input" class="search-input" placeholder="商品名、クリエイター、アバター名を検索..." aria-label="商品を検索">
+            </div>
+
+            <div class="category-chips">
+                <button class="category-chip active" data-category="">🔥 すべて表示</button>
+                <button class="category-chip" data-category="衣装">👗 衣装・服飾</button>
+                <button class="category-chip" data-category="ヘア">💇 髪型・ヘア</button>
+                <button class="category-chip" data-category="メイク">💄 メイク・瞳</button>
+                <button class="category-chip" data-category="アクセサリー">💍 アクセサリー</button>
+                <button class="category-chip" data-category="ワールド">🏠 ワールド・3D</button>
+            </div>
+
+            <!-- 商品URL登録（ログイン後に利用可能） -->
+            <div class="register-url-wrap">
+                <input type="url" id="register-url-input" class="register-url-input" placeholder="BOOTHの商品URLを入力して登録（例: https://booth.pm/ja/items/1234567）">
+                <button id="open-register-btn" class="btn-primary">商品を登録</button>
+            </div>
+        </section>
+
+        <!-- 統計ボード -->
+        <div class="stats-row">
+            <div class="stats-box">
+                <div class="stats-num" id="stat-total">-</div>
+                <div class="stats-label">登録アイテム数</div>
+            </div>
+            <div class="stats-box stats-highlight">
+                <div class="stats-num" id="stat-sale">-</div>
+                <div class="stats-label">割引セール中</div>
+            </div>
+            <div class="stats-box">
+                <div class="stats-num" id="stat-reviews">-</div>
+                <div class="stats-label">総レビュー件数</div>
+            </div>
+            <div class="stats-box">
+                <div class="stats-num" id="stat-avatars">-</div>
+                <div class="stats-label">対応アバター数</div>
+            </div>
+        </div>
+
+        <!-- 商品一覧 -->
+        <section class="section-block">
+            <div class="section-bar">
+                <h2 class="section-title">登録商品一覧</h2>
+            </div>
+            <div class="grid-3" id="products-grid">
+                <div class="loading-spinner">読み込み中...</div>
+            </div>
+        </section>
+
+        <!-- 人気アバター -->
+        <section class="section-block">
+            <div class="section-bar">
+                <h2 class="section-title">人気のアバターデータベース</h2>
+                <a href="avatar.html" class="section-link">すべて見る ↗</a>
+            </div>
+            <div class="avatar-grid" id="avatars-grid">
+                <div class="loading-spinner">読み込み中...</div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- フッター -->
+    <footer class="site-footer">
+        <p>&copy; 2026 BOOTHDB. VRChat and BOOTH are trademarks of their respective owners.</p>
+        <p>当サイトは有志による非公式のファンプロジェクト、価格履歴トラッカーデータベースです。</p>
+    </footer>
+
+    <!-- 認証モーダル（ログイン / 登録） -->
+    <div class="modal-overlay" id="auth-modal" role="dialog" aria-modal="true" aria-label="ログイン / 新規登録">
+        <div class="modal-box">
+            <button class="modal-close-btn" aria-label="閉じる">✕</button>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-login">ログイン</button>
+                <button class="auth-tab" id="tab-register">新規登録</button>
+            </div>
+
+            <!-- ログインフォーム -->
+            <form id="form-login">
+                <div class="form-group">
+                    <label class="form-label" for="login-email">メールアドレス</label>
+                    <input class="form-input" type="email" id="login-email" placeholder="example@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="login-password">パスワード</label>
+                    <input class="form-input" type="password" id="login-password" placeholder="パスワードを入力" required>
+                </div>
+                <button type="submit" class="btn-primary form-submit-btn">ログイン</button>
+            </form>
+
+            <!-- 登録フォーム -->
+            <form id="form-register" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label" for="register-username">ユーザー名（2〜20文字）</label>
+                    <input class="form-input" type="text" id="register-username" placeholder="VRC_UserName" minlength="2" maxlength="20" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="register-email">メールアドレス</label>
+                    <input class="form-input" type="email" id="register-email" placeholder="example@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="register-password">パスワード（8文字以上）</label>
+                    <input class="form-input" type="password" id="register-password" placeholder="8文字以上のパスワード" minlength="8" required>
+                </div>
+                <button type="submit" class="btn-primary form-submit-btn">登録する</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 商品URL登録モーダル -->
+    <div class="modal-overlay" id="register-modal" role="dialog" aria-modal="true" aria-label="商品URL登録">
+        <div class="modal-box">
+            <button class="modal-close-btn" aria-label="閉じる">✕</button>
+            <h2 class="modal-title">BOOTH商品を登録</h2>
+            <form id="register-form">
+                <div class="form-group">
+                    <label class="form-label" for="modal-register-url">BOOTH商品URL</label>
+                    <input class="form-input" type="url" id="modal-register-url" id="register-url-input" placeholder="https://booth.pm/ja/items/1234567" required>
+                </div>
+                <button type="submit" id="register-submit-btn" class="btn-primary form-submit-btn">商品を登録する</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/top.js"></script>
+</body>
+</html>

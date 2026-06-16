@@ -1,0 +1,195 @@
+/* ===========================================
+   avatar.css - アバター別ページ専用スタイル
+   =========================================== */
+
+/* -------------------------------------------
+   アバタープロフィールボックス
+   ------------------------------------------- */
+.avatar-profile-box {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: 2.5rem;
+    display: flex;
+    gap: 2.5rem;
+    align-items: center;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.avatar-profile-box::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 100%;
+    background: radial-gradient(circle at right, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.avatar-profile-icon {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: var(--grad-main);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: white;
+    border: 4px solid var(--bg-base);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.avatar-profile-info {
+    position: relative;
+    z-index: 1;
+}
+
+.avatar-profile-info h1 {
+    font-size: 2.2rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.25rem;
+    background: linear-gradient(135deg, var(--text-primary) 50%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.avatar-profile-subtitle {
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+}
+
+.avatar-stat-pills {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.avatar-stat-pill {
+    background-color: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    padding: 0.4rem 1rem;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    transition: border-color var(--transition-speed);
+}
+
+.avatar-stat-pill:hover {
+    border-color: var(--color-primary);
+}
+
+/* -------------------------------------------
+   フィルターバー
+   ------------------------------------------- */
+.avatar-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+    border-radius: var(--border-radius-lg);
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
+.avatar-controls-left {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.avatar-select {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius-md);
+    font-weight: 700;
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
+    transition: border-color var(--transition-speed), background-color var(--transition-speed);
+    font-family: var(--font-family);
+}
+
+.avatar-select:focus {
+    border-color: var(--color-primary);
+}
+
+.avatar-search-input {
+    background-color: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: 0.5rem 1rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    outline: none;
+    width: 240px;
+    transition: border-color var(--transition-speed), background-color var(--transition-speed);
+    font-family: var(--font-family);
+}
+
+.avatar-search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.avatar-search-input:focus {
+    border-color: var(--color-primary);
+}
+
+/* -------------------------------------------
+   レスポンシブ
+   ------------------------------------------- */
+@media (max-width: 768px) {
+    .avatar-profile-box {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.5rem;
+        gap: 1.5rem;
+    }
+
+    .avatar-profile-info h1 {
+        font-size: 1.6rem;
+    }
+
+    .avatar-stat-pills {
+        justify-content: center;
+    }
+
+    .avatar-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .avatar-controls-left {
+        flex-direction: column;
+    }
+
+    .avatar-select,
+    .avatar-search-input {
+        width: 100%;
+    }
+
+    .avatar-profile-box::after {
+        display: none;
+    }
+}

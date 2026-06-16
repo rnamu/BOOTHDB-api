@@ -1,0 +1,489 @@
+/* ===========================================
+   detail.css - 商品詳細ページ専用スタイル
+   =========================================== */
+
+/* -------------------------------------------
+   パンくずリスト
+   ------------------------------------------- */
+.breadcrumb {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+    align-items: center;
+}
+
+.breadcrumb-link {
+    cursor: pointer;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color var(--transition-speed);
+}
+
+.breadcrumb-link:hover {
+    color: var(--color-primary);
+}
+
+.breadcrumb-sep {
+    color: var(--border-color);
+}
+
+.breadcrumb-current {
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+/* -------------------------------------------
+   商品ヘッダー（3カラム）
+   ------------------------------------------- */
+.detail-header {
+    display: grid;
+    grid-template-columns: 240px 1fr 280px;
+    gap: 2rem;
+    padding: 1.75rem;
+    margin-bottom: 2rem;
+    align-items: center;
+}
+
+.detail-thumb {
+    width: 100%;
+    height: 180px;
+    border-radius: var(--border-radius-md);
+    background: linear-gradient(135deg, var(--bg-accent-soft) 0%, var(--bg-hover) 100%);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    overflow: hidden;
+}
+
+.detail-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--border-radius-md);
+}
+
+.detail-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.detail-badge {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--color-primary);
+    background-color: var(--bg-accent-soft);
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    width: fit-content;
+    letter-spacing: 0.05em;
+}
+
+.detail-title {
+    font-size: 1.75rem;
+    font-weight: 900;
+    line-height: 1.25;
+    color: var(--text-primary);
+}
+
+.detail-creator {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.detail-creator-link {
+    font-weight: 800;
+    color: var(--color-primary);
+    text-decoration: underline;
+    cursor: pointer;
+    transition: opacity var(--transition-speed);
+}
+
+.detail-creator-link:hover {
+    opacity: 0.75;
+}
+
+/* 購入ボックス */
+.detail-checkout {
+    background-color: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: 1.25rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.checkout-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.checkout-price {
+    font-size: 1.9rem;
+    font-weight: 900;
+    color: var(--text-primary);
+}
+
+.checkout-price-discount {
+    font-size: 0.95rem;
+    color: var(--color-accent);
+    font-weight: 800;
+    margin-left: 0.35rem;
+}
+
+/* -------------------------------------------
+   2カラムレイアウト（サイドバー＋メイン）
+   ------------------------------------------- */
+.detail-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 2rem;
+}
+
+.detail-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.detail-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* -------------------------------------------
+   スペックカード
+   ------------------------------------------- */
+.spec-card {
+    padding: 1.5rem;
+}
+
+.spec-card-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.spec-table tr {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.spec-table tr:last-child {
+    border-bottom: none;
+}
+
+.spec-table td {
+    padding: 0.65rem 0;
+    color: var(--text-primary);
+}
+
+.spec-table .spec-label {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.spec-table .spec-value {
+    text-align: right;
+    font-weight: 800;
+}
+
+/* -------------------------------------------
+   対応アバターリスト
+   ------------------------------------------- */
+.avatar-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.avatar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--bg-hover);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--border-color);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.avatar-row:hover {
+    background-color: var(--bg-accent-soft);
+    border-color: var(--color-primary);
+}
+
+.avatar-row-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.avatar-initials {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: white;
+    flex-shrink: 0;
+}
+
+.avatar-row-badge {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+/* -------------------------------------------
+   価格推移グラフ
+   ------------------------------------------- */
+.chart-card {
+    padding: 1.5rem;
+}
+
+.chart-header {
+    margin-bottom: 0.5rem;
+}
+
+.chart-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.chart-title::before {
+    content: '';
+    display: block;
+    width: 5px;
+    height: 1.1rem;
+    background: var(--grad-main);
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.chart-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 700;
+    margin-top: 0.25rem;
+}
+
+.chart-viewport {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    margin-top: 1rem;
+}
+
+/* -------------------------------------------
+   レビューモジュール
+   ------------------------------------------- */
+.reviews-card {
+    padding: 1.5rem;
+}
+
+.reviews-overview {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 1.5rem;
+    background-color: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    padding: 1.25rem;
+    border-radius: var(--border-radius-lg);
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+
+.reviews-avg-block {
+    text-align: center;
+}
+
+.reviews-avg-num {
+    font-size: 3.2rem;
+    font-weight: 900;
+    color: var(--color-primary);
+    line-height: 1.1;
+}
+
+.reviews-avg-stars {
+    color: #fbbf24;
+    font-size: 0.85rem;
+    margin-top: 0.2rem;
+}
+
+.reviews-avg-count {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-weight: 800;
+    margin-top: 0.25rem;
+}
+
+.distribution-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.dist-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.dist-label {
+    width: 35px;
+    flex-shrink: 0;
+}
+
+.dist-track {
+    flex-grow: 1;
+    height: 6px;
+    background-color: var(--border-color);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.dist-fill {
+    height: 100%;
+    background: var(--grad-main);
+    border-radius: 3px;
+}
+
+.dist-pct {
+    width: 30px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.review-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.review-item {
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.review-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.review-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.review-user {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.review-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--color-primary);
+    flex-shrink: 0;
+}
+
+.review-username {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.review-stars {
+    color: #fbbf24;
+    font-size: 0.7rem;
+}
+
+.review-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.review-body {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    line-height: 1.45;
+}
+
+/* -------------------------------------------
+   レスポンシブ
+   ------------------------------------------- */
+@media (max-width: 900px) {
+    .detail-header {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .detail-thumb {
+        height: 200px;
+    }
+
+    .detail-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-title {
+        font-size: 1.35rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .reviews-overview {
+        grid-template-columns: 1fr;
+    }
+
+    .reviews-avg-block {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        text-align: left;
+    }
+}

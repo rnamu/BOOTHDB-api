@@ -1,0 +1,355 @@
+/* ===========================================
+   detail.js - 商品詳細ページ（API連携版）
+   =========================================== */
+
+'use strict';
+
+let activeChart = null;
+let currentProductId = null;
+
+// ==========================================
+// グラフ描画
+// ==========================================
+
+function renderPriceChart(historyData) {
+    const canvas = document.getElementById('price-chart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    if (activeChart) {
+        activeChart.destroy();
+        activeChart = null;
+    }
+
+    if (!historyData || historyData.length === 0) {
+        canvas.closest('.chart-viewport').innerHTML = '<p class="empty-message">価格履歴がまだありません</p>';
+        return;
+    }
+
+    const labels = historyData.map(function (h) {
+        const d = new Date(h.recorded_at);
+        return `${d.getMonth() + 1}/${d.getDate()}`;
+    });
+    const prices = historyData.map(function (h) { return h.price; });
+
+    const style  = getComputedStyle(document.documentElement);
+    const gridColor  = style.getPropertyValue('--chart-grid').trim();
+    const tickColor  = style.getPropertyValue('--chart-tick').trim();
+    const ttBg       = style.getPropertyValue('--chart-tooltip-bg').trim();
+    const ttTitle    = style.getPropertyValue('--chart-tooltip-title').trim();
+    const ttBody     = style.getPropertyValue('--chart-tooltip-body').trim();
+    const ttBorder   = style.getPropertyValue('--chart-tooltip-border').trim();
+
+    const fillGradient = ctx.createLinearGradient(0, 0, 0, 300);
+    fillGradient.addColorStop(0, 'rgba(139, 92, 246, 0.2)');
+    fillGradient.addColorStop(1, 'rgba(139, 92, 246, 0.01)');
+
+    activeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: '販売価格 (¥)',
+                data: prices,
+                borderColor: '#8b5cf6',
+                backgroundColor: fillGradient,
+                borderWidth: 3.5,
+                tension: 0.15,
+                fill: true,
+                pointBackgroundColor: '#06b6d4',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: ttBg,
+                    titleColor: ttTitle,
+                    bodyColor: ttBody,
+                    borderColor: ttBorder,
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {
+                        label: function (ctx) { return '¥' + ctx.parsed.y.toLocaleString(); }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    grid: { color: gridColor },
+                    ticks: {
+                        color: tickColor,
+                        font: { weight: 'bold' },
+                        callback: function (v) { return '¥' + v.toLocaleString(); }
+                    }
+                },
+                x: {
+                    grid: { color: gridColor },
+                    ticks: { color: tickColor, font: { weight: 'bold' } }
+                }
+            }
+        }
+    });
+
+    // テーマ変更時にグラフを再描画
+    new MutationObserver(function () {
+        if (activeChart) renderPriceChart(historyData);
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+
+
+// ==========================================
+// 商品情報の表示
+// ==========================================
+
+function renderProductInfo(product) {
+    const set = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text ?? '-';
+    };
+
+    set('breadcrumb-product', product.title);
+    set('detail-title', product.title);
+    set('detail-creator', product.creator_name || '-');
+    document.title = `${product.title} | BOOTHDB`;
+
+    // パンくずの商品名
+    const crumb = document.getElementById('breadcrumb-product');
+    if (crumb) crumb.textContent = product.title;
+
+    // サムネイル
+    const thumb = document.getElementById('detail-thumb');
+    if (thumb) {
+        if (product.thumbnail_url) {
+            thumb.innerHTML = `<img src="${escapeHtml(product.thumbnail_url)}" alt="${escapeHtml(product.title)}">`;
+        } else {
+            thumb.textContent = product.title;
+        }
+    }
+
+    // BOOTH公式リンク
+    const boothLink = document.getElementById('booth-link');
+    if (boothLink) boothLink.href = product.booth_url || '#';
+
+    // 価格
+    const priceEl = document.getElementById('detail-price');
+    if (priceEl && product.current_price != null) {
+        priceEl.textContent = `¥${product.current_price.toLocaleString()}`;
+    }
+}
+
+
+// ==========================================
+// 価格統計の表示
+// ==========================================
+
+function renderPriceStats(priceData) {
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val != null ? `¥${Number(val).toLocaleString()}` : '-';
+    };
+    set('stat-current', priceData.current_price);
+    set('stat-lowest',  priceData.lowest_price);
+    set('stat-highest', priceData.highest_price);
+
+    const dateEl = document.getElementById('stat-lowest-date');
+    if (dateEl && priceData.lowest_price_date) {
+        const d = new Date(priceData.lowest_price_date);
+        dateEl.textContent = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+    }
+}
+
+
+// ==========================================
+// レビューの表示
+// ==========================================
+
+function renderReviews(reviewData) {
+    // 平均評価
+    const avgEl = document.getElementById('review-avg');
+    if (avgEl) avgEl.textContent = reviewData.average_rating?.toFixed(1) ?? '-';
+
+    const countEl = document.getElementById('review-count');
+    if (countEl) countEl.textContent = reviewData.total;
+
+    // 分布バー
+    const dist = reviewData.rating_distribution || {};
+    const total = Object.values(dist).reduce((a, b) => a + b, 0);
+    for (let i = 1; i <= 5; i++) {
+        const fill = document.getElementById(`dist-fill-${i}`);
+        const pct  = document.getElementById(`dist-pct-${i}`);
+        const count = dist[String(i)] || 0;
+        const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+        if (fill) fill.style.width = `${percent}%`;
+        if (pct)  pct.textContent = `${percent}%`;
+    }
+
+    // レビュー一覧
+    const listEl = document.getElementById('review-list');
+    if (!listEl) return;
+
+    if (!reviewData.items || reviewData.items.length === 0) {
+        listEl.innerHTML = '<p class="empty-message">まだレビューはありません。最初のレビューを投稿しましょう！</p>';
+        return;
+    }
+
+    listEl.innerHTML = reviewData.items.map(function (r) {
+        const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+        const date = new Date(r.created_at);
+        const dateStr = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+        return `
+            <div class="review-item">
+                <div class="review-meta">
+                    <div class="review-user">
+                        <div class="review-avatar" style="background: linear-gradient(135deg,#a78bfa,#8b5cf6);"></div>
+                        <div>
+                            <div class="review-username">${escapeHtml(r.username || '匿名ユーザー')}</div>
+                            <div class="review-stars">${stars}</div>
+                        </div>
+                    </div>
+                    <span class="review-date">${dateStr}</span>
+                </div>
+                ${r.avatar_name ? `<p class="review-avatar-tag">使用アバター: ${escapeHtml(r.avatar_name)}</p>` : ''}
+                ${r.comment ? `<p class="review-body">${escapeHtml(r.comment)}</p>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+
+// ==========================================
+// レビュー投稿フォーム
+// ==========================================
+
+async function loadAvatarOptions() {
+    const select = document.getElementById('review-avatar-select');
+    if (!select) return;
+
+    try {
+        const data = await AvatarApi.list();
+        select.innerHTML = '<option value="">アバターを選択</option>'
+            + data.items.map(function (a) {
+                return `<option value="${escapeHtml(a.id)}">${escapeHtml(a.name)}</option>`;
+            }).join('');
+    } catch (err) {
+        console.error('アバター一覧取得エラー:', err);
+    }
+}
+
+async function handleReviewSubmit(e) {
+    e.preventDefault();
+    if (!Auth.isLoggedIn()) {
+        showToast('レビューを投稿するにはログインが必要です', 'error');
+        openModal('auth-modal');
+        return;
+    }
+
+    const avatarId = document.getElementById('review-avatar-select')?.value;
+    const rating   = parseInt(document.querySelector('.star-btn.selected')?.getAttribute('data-rating') || '0');
+    const comment  = document.getElementById('review-comment')?.value.trim() || null;
+    const submitBtn = document.getElementById('review-submit-btn');
+
+    if (!avatarId) { showToast('使用アバターを選択してください', 'error'); return; }
+    if (!rating)   { showToast('評価（星）を選択してください', 'error'); return; }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '投稿中...';
+
+    try {
+        await ReviewApi.post({
+            productId: currentProductId,
+            avatarId,
+            rating,
+            comment,
+        });
+        showToast('レビューを投稿しました！', 'success');
+        // レビュー再読み込み
+        const reviewData = await ProductApi.getReviews(currentProductId);
+        renderReviews(reviewData);
+    } catch (err) {
+        showToast(err.message || 'レビューの投稿に失敗しました', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'レビューを投稿';
+    }
+}
+
+
+// ==========================================
+// 星評価ボタン
+// ==========================================
+
+function initStarButtons() {
+    const buttons = document.querySelectorAll('.star-btn');
+    buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const rating = parseInt(btn.getAttribute('data-rating'));
+            buttons.forEach(function (b, i) {
+                b.classList.toggle('selected', parseInt(b.getAttribute('data-rating')) <= rating);
+            });
+        });
+        btn.addEventListener('mouseover', function () {
+            const rating = parseInt(btn.getAttribute('data-rating'));
+            buttons.forEach(function (b) {
+                b.classList.toggle('hovered', parseInt(b.getAttribute('data-rating')) <= rating);
+            });
+        });
+        btn.addEventListener('mouseout', function () {
+            buttons.forEach(function (b) { b.classList.remove('hovered'); });
+        });
+    });
+}
+
+
+// ==========================================
+// 初期化
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', async function () {
+    const params = new URLSearchParams(location.search);
+    currentProductId = params.get('id');
+
+    if (!currentProductId) {
+        document.querySelector('main').innerHTML = '<p class="error-message">商品IDが指定されていません</p>';
+        return;
+    }
+
+    // 並行してデータを取得
+    try {
+        const [product, priceData, reviewData] = await Promise.all([
+            ProductApi.get(currentProductId),
+            ProductApi.getPriceHistory(currentProductId),
+            ProductApi.getReviews(currentProductId),
+        ]);
+
+        renderProductInfo(product);
+        renderPriceStats(priceData);
+        renderPriceChart(priceData.history);
+        renderReviews(reviewData);
+
+    } catch (err) {
+        showToast('商品データの読み込みに失敗しました', 'error');
+        console.error(err);
+    }
+
+    // レビューフォーム初期化
+    await loadAvatarOptions();
+    initStarButtons();
+
+    const reviewForm = document.getElementById('review-form');
+    if (reviewForm) reviewForm.addEventListener('submit', handleReviewSubmit);
+
+    // アバター行のクリック → アバターページへ
+    document.querySelectorAll('[data-avatar-link]').forEach(function (el) {
+        el.addEventListener('click', function () {
+            location.href = `avatar.html?id=${encodeURIComponent(el.getAttribute('data-avatar-link'))}`;
+        });
+    });
+});
