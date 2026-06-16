@@ -1,0 +1,237 @@
+/* ===========================================
+   admin.css - 管理者ページ専用スタイル
+   =========================================== */
+
+/* ==========================================
+   管理者バッジ
+   ========================================== */
+.admin-badge {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: var(--color-accent);
+    background-color: rgba(219, 39, 119, 0.12);
+    border: 1px solid rgba(219, 39, 119, 0.3);
+    padding: 0.3rem 0.8rem;
+    border-radius: 30px;
+}
+
+/* ==========================================
+   ログイン画面
+   ========================================== */
+.admin-login-screen {
+    min-height: calc(100vh - 70px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.admin-login-box {
+    width: 100%;
+    max-width: 400px;
+    padding: 2.5rem;
+    text-align: center;
+}
+
+.admin-login-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.admin-login-title {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+}
+
+/* ==========================================
+   タブナビゲーション
+   ========================================== */
+.admin-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0;
+    flex-wrap: wrap;
+}
+
+.admin-tab {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all var(--transition-speed);
+    font-family: var(--font-family);
+}
+
+.admin-tab:hover {
+    color: var(--text-primary);
+}
+
+.admin-tab.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+/* ==========================================
+   パネル
+   ========================================== */
+.admin-panel {
+    display: none;
+}
+
+.admin-panel.active {
+    display: block;
+}
+
+/* ==========================================
+   テーブル
+   ========================================== */
+.admin-table-wrap {
+    overflow-x: auto;
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--border-color);
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    background-color: var(--bg-card);
+}
+
+.admin-table thead {
+    background-color: var(--bg-hover);
+}
+
+.admin-table th {
+    padding: 0.85rem 1rem;
+    text-align: left;
+    font-weight: 800;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.admin-table td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+.admin-table tr:last-child td {
+    border-bottom: none;
+}
+
+.admin-table tr:hover td {
+    background-color: var(--bg-hover);
+}
+
+.admin-table .td-title {
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+}
+
+.admin-table .td-comment {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-secondary);
+}
+
+.admin-table .td-date {
+    white-space: nowrap;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.admin-table .td-price {
+    white-space: nowrap;
+    font-weight: 800;
+}
+
+/* ==========================================
+   操作ボタン
+   ========================================== */
+.admin-action-btns {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: nowrap;
+}
+
+.btn-edit {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--color-primary);
+    background: transparent;
+    color: var(--color-primary);
+    cursor: pointer;
+    transition: all var(--transition-speed);
+    font-family: var(--font-family);
+    white-space: nowrap;
+}
+
+.btn-edit:hover {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+.btn-delete {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--color-accent);
+    background: transparent;
+    color: var(--color-accent);
+    cursor: pointer;
+    transition: all var(--transition-speed);
+    font-family: var(--font-family);
+    white-space: nowrap;
+}
+
+.btn-delete:hover {
+    background-color: var(--color-accent);
+    color: white;
+}
+
+/* ==========================================
+   星評価表示
+   ========================================== */
+.stars-display {
+    color: #fbbf24;
+    font-size: 0.85rem;
+}
+
+/* ==========================================
+   レスポンシブ
+   ========================================== */
+@media (max-width: 768px) {
+    .admin-tabs {
+        gap: 0;
+    }
+
+    .admin-tab {
+        padding: 0.5rem 0.7rem;
+        font-size: 0.8rem;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 0.6rem 0.7rem;
+    }
+}
