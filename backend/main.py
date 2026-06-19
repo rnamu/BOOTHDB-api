@@ -480,6 +480,48 @@ async def admin_delete_avatar(avatar_id: str, token: str = Depends(require_admin
     return {"message": "削除しました"}
 
 
+@app.post("/api/admin/products/{product_id}/rescrape", tags=["管理者"])
+async def admin_rescrape_product(product_id: str, token: str = Depends(require_admin)):
+    """
+    商品情報を再取得して上書き更新する（管理者専用）。
+    タイトル抽出ロジックなどを修正した後、既存商品を直したい場合に使う。
+    """
+    db = get_db()
+    res = db.table("products").select("booth_item_id").eq("id", product_id).maybe_single().execute()
+    if not res or not res.data:
+        raise HTTPException(status_code=404, detail="商品が見つかりません")
+
+    booth_item_id = res.data["booth_item_id"]
+    scraped = await scrape_booth_item(booth_item_id)
+    if not scraped:
+        raise HTTPException(status_code=422, detail="再取得に失敗しました。BOOTH側で商品が削除された可能性があります。")
+
+    update_data = {
+        "title": scraped["title"],
+        "creator_name": scraped["creator_name"],
+        "shop_name": scraped["shop_name"],
+        "current_price": scraped["current_price"],
+        "thumbnail_url": scraped["thumbnail_url"],
+        "category": scraped["category"],
+        "description": scraped["description"],
+        "last_checked_at": __import__("datetime").datetime.utcnow().isoformat(),
+    }
+    db.table("products").update(update_data).eq("id", product_id).execute()
+
+    # 価格が変わっていれば履歴に追加
+    if scraped["current_price"] is not None:
+        await add_price_history(product_id, scraped["current_price"])
+
+    # アバター紐付けも再実行
+    for avatar_name in scraped.get("extracted_avatar_names", []):
+        avatar = await get_avatar_by_name(avatar_name)
+        if avatar:
+            await link_product_avatar(product_id, avatar["id"])
+
+    updated = db.table("products").select("*").eq("id", product_id).maybe_single().execute()
+    return updated.data
+
+
 # ==========================================
 # 管理者API - カテゴリクロール
 # ==========================================
