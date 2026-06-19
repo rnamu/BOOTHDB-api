@@ -151,8 +151,13 @@ async def scrape_booth_item(item_id: str) -> Optional[dict]:
         print(f"[Scraper] タイトルが取得できませんでした: {url}")
         return None
 
-    # --- 価格 ---
-    price = _extract_price(soup)
+    # --- 価格・バリエーション ---
+    variations = _extract_variations(soup)
+    if variations:
+        # 全バリエーション中の最高額をトップ表示価格として採用
+        price = max(v["price"] for v in variations)
+    else:
+        price = _extract_price(soup)
 
     # --- クリエイター名 ---
     creator_name = _get_text(soup, ".shop-name") \
@@ -197,6 +202,7 @@ async def scrape_booth_item(item_id: str) -> Optional[dict]:
         "category": category,
         "description": (description or "")[:2000],  # 最大2000文字
         "extracted_avatar_names": avatar_names,
+        "variations": variations,
     }
 
 
@@ -404,3 +410,70 @@ def _extract_avatar_names(text: str) -> list[str]:
         if name in text and name not in found:
             found.append(name)
     return found
+
+
+def _extract_variations(soup: BeautifulSoup) -> list[dict]:
+    """
+    商品ページのバリエーション一覧（名前＋価格）を抽出する。
+    BOOTHのバリエーション選択UIは商品名見出しの直後にリスト形式で
+    複数の「名前 / 商品タイプ / 価格」ブロックとして並んでいる。
+
+    Returns:
+        [{"name": "フルパック", "price": 5000, "sort_order": 0}, ...]
+        バリエーションがない単一価格の商品の場合は空リストを返す。
+    """
+    variations: list[dict] = []
+
+    # バリエーション選択リスト（liタグの並び）を探す
+    # 各候補に「価格」と「ダウンロード商品」等のラベルが含まれる構造を想定
+    candidates = soup.select("li") 
+
+    yen_pattern = re.compile(r"[¥￥]\s*([\d,]+)")
+
+    for idx, li in enumerate(candidates):
+        text = li.get_text(separator="\n", strip=True)
+        if not text:
+            continue
+
+        price_match = yen_pattern.search(text)
+        if not price_match:
+            continue
+
+        price = _parse_price_string(price_match.group(1))
+        if price is None:
+            continue
+
+        # 価格行より前のテキストをバリエーション名として扱う
+        lines = [l.strip() for l in text.split("\n") if l.strip()]
+        if not lines:
+            continue
+
+        # 最初の行をバリエーション名候補とする
+        # （「ダウンロード商品」「カートに入れる」等のラベル行は除外）
+        skip_labels = {"ダウンロード商品", "カートに入れる", "ギフトとして贈る", "在庫なし", "在庫あり"}
+        name_lines = [l for l in lines if l not in skip_labels and not yen_pattern.match(l)]
+        if not name_lines:
+            continue
+        name = name_lines[0][:100]  # 念のため長さ制限
+
+        variations.append({
+            "name": name,
+            "price": price,
+            "sort_order": idx,
+        })
+
+    # 同名・同価格の重複を除去（ページ構造上、同じliが入れ子で重複検出されることがあるため）
+    seen = set()
+    unique_variations = []
+    for v in variations:
+        key = (v["name"], v["price"])
+        if key not in seen:
+            seen.add(key)
+            unique_variations.append(v)
+
+    # バリエーションが1件しかない場合は「単一価格商品」とみなし、空リストを返す
+    # （通常の単一価格表示で十分なため、わざわざバリエーション欄を作らない）
+    if len(unique_variations) <= 1:
+        return []
+
+    return unique_variations
