@@ -109,6 +109,34 @@ function renderPriceChart(historyData) {
 // 商品情報の表示
 // ==========================================
 
+function renderVariations(variations) {
+    const card = document.getElementById('variations-card');
+    const list = document.getElementById('variations-list');
+    if (!card || !list) return;
+
+    if (!variations || variations.length === 0) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = 'block';
+
+    const highest = Math.max(...variations.map(v => v.price));
+
+    list.innerHTML = variations.map(function (v) {
+        const isHighest = v.price === highest;
+        return `
+            <div class="variation-row">
+                <span class="variation-name">
+                    ${escapeHtml(v.name)}
+                    ${isHighest ? '<span class="variation-highest-badge">最高額</span>' : ''}
+                </span>
+                <span class="variation-price ${isHighest ? 'is-highest' : ''}">¥${v.price.toLocaleString()}</span>
+            </div>
+        `;
+    }).join('');
+}
+
 function renderProductInfo(product) {
     const set = (id, text) => {
         const el = document.getElementById(id);
@@ -326,16 +354,18 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // 並行してデータを取得
     try {
-        const [product, priceData, reviewData] = await Promise.all([
+        const [product, priceData, reviewData, variationData] = await Promise.all([
             ProductApi.get(currentProductId),
             ProductApi.getPriceHistory(currentProductId),
             ProductApi.getReviews(currentProductId),
+            ProductApi.getVariations(currentProductId),
         ]);
 
         renderProductInfo(product);
         renderPriceStats(priceData);
         renderPriceChart(priceData.history);
         renderReviews(reviewData);
+        renderVariations(variationData.items);
 
     } catch (err) {
         showToast('商品データの読み込みに失敗しました', 'error');
