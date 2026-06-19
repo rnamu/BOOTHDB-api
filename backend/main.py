@@ -369,8 +369,11 @@ async def login(body: dict):
 @app.get("/api/auth/me", tags=["認証"])
 async def me(user: dict = Depends(get_current_user)):
     db = get_db()
-    profile_res = db.table("profiles").select("username").eq("id", user["id"]).maybe_single().execute()
-    username = (profile_res.data or {}).get("username", "")
+    try:
+        profile_res = db.table("profiles").select("username").eq("id", user["id"]).maybe_single().execute()
+        username = (profile_res.data or {}).get("username", "") if profile_res else ""
+    except Exception:
+        username = ""
     return {"user_id": user["id"], "email": user["email"], "username": username}
 
 
