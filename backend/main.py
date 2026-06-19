@@ -347,8 +347,11 @@ async def login(body: dict):
             raise HTTPException(status_code=401, detail="メールアドレスまたはパスワードが正しくありません")
 
         db = get_db()
-        profile_res = db.table("profiles").select("username").eq("id", user.id).maybe_single().execute()
-        username = (profile_res.data or {}).get("username", "")
+        try:
+            profile_res = db.table("profiles").select("username").eq("id", user.id).maybe_single().execute()
+            username = (profile_res.data or {}).get("username", "") if profile_res else ""
+        except Exception:
+            username = ""
 
         return {
             "access_token": session.access_token,
