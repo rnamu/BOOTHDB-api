@@ -21,7 +21,7 @@ from database import (
     add_price_history, get_price_history, get_price_stats,
     get_avatars, get_avatar_by_id, get_products_by_avatar, link_product_avatar,
     create_review, get_reviews, get_review_stats, get_avatar_ratings,
-    has_user_reviewed,
+    has_user_reviewed, save_product_variations, get_product_variations,
 )
 from scraper import extract_booth_item_id, scrape_booth_item
 from scheduler import start_scheduler, stop_scheduler
@@ -129,6 +129,10 @@ async def register_product(
     if scraped["current_price"] is not None:
         await add_price_history(product["id"], scraped["current_price"])
 
+    # バリエーションを保存
+    if scraped.get("variations"):
+        await save_product_variations(product["id"], scraped["variations"])
+
     for avatar_name in scraped.get("extracted_avatar_names", []):
         from database import get_avatar_by_name
         avatar = await get_avatar_by_name(avatar_name)
@@ -151,11 +155,19 @@ async def list_products(
 
 @app.get("/api/products/{product_id}", response_model=ProductResponse, tags=["商品"])
 async def get_product(product_id: str):
+    """商品詳細を取得する"""
     db = get_db()
     res = db.table("products").select("*").eq("id", product_id).maybe_single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="商品が見つかりません")
     return res.data
+
+
+@app.get("/api/products/{product_id}/variations", tags=["商品"])
+async def get_product_variations_endpoint(product_id: str):
+    """商品のバリエーション一覧を取得する"""
+    variations = await get_product_variations(product_id)
+    return {"items": variations, "total": len(variations)}
 
 
 # ==========================================
@@ -511,6 +523,10 @@ async def admin_rescrape_product(product_id: str, token: str = Depends(require_a
     # 価格が変わっていれば履歴に追加
     if scraped["current_price"] is not None:
         await add_price_history(product_id, scraped["current_price"])
+
+    # バリエーションも再取得して上書き保存
+    if scraped.get("variations"):
+        await save_product_variations(product_id, scraped["variations"])
 
     # アバター紐付けも再実行
     for avatar_name in scraped.get("extracted_avatar_names", []):
