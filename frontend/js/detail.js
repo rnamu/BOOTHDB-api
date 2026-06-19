@@ -356,3 +356,49 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     });
 });
+
+
+/**
+ * 管理者専用「再収集」ボタンの初期化
+ * sessionStorageに管理者トークンがある場合のみボタンを表示する
+ */
+function initAdminRescrapeButton() {
+    const ADMIN_TOKEN_KEY = 'boothdb_admin_token';
+    const adminToken = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+    const btn = document.getElementById('admin-rescrape-btn');
+    if (!btn) return;
+
+    if (!adminToken) {
+        btn.style.display = 'none';
+        return;
+    }
+
+    btn.style.display = 'block';
+    btn.addEventListener('click', async function () {
+        if (!confirm('BOOTHから最新情報を再取得しますか？\n現在のタイトル・価格・説明文が上書きされます。')) return;
+
+        btn.disabled = true;
+        btn.textContent = '取得中...';
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/admin/products/${currentProductId}/rescrape`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${adminToken}`,
+                },
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || '再取得に失敗しました');
+
+            showToast('情報を更新しました', 'success');
+            // ページの表示を更新するため再読み込み
+            location.reload();
+        } catch (err) {
+            showToast(err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🔄 管理者: 情報を再取得';
+        }
+    });
+}
