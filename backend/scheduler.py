@@ -120,6 +120,8 @@ async def _register_item_if_new(item_id: str) -> bool:
         avatar = await get_avatar_by_name(avatar_name)
         if avatar:
             await link_product_avatar(product["id"], avatar["id"])
+        # Supabaseへの連続リクエストを緩和
+        await asyncio.sleep(0.3)
 
     return True
 
