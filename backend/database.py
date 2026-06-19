@@ -20,6 +20,17 @@ def get_db() -> Client:
     return _client
 
 
+def _first_or_none(res) -> Optional[dict]:
+    """
+    .limit(1).execute() の結果から1件目を安全に取り出す。
+    maybe_single()はレコード0件のときにライブラリ内部で例外を起こすことがあるため使わない。
+    """
+    if res and getattr(res, "data", None):
+        if len(res.data) > 0:
+            return res.data[0]
+    return None
+
+
 # ==========================================
 # 商品操作
 # ==========================================
@@ -33,11 +44,10 @@ async def get_product_by_booth_id(booth_item_id: str) -> Optional[dict]:
             .eq("booth_item_id", booth_item_id) \
             .limit(1) \
             .execute()
-        if res and res.data and len(res.data) > 0:
-            return res.data[0]
+        return _first_or_none(res)
     except Exception as e:
         print(f"[get_product_by_booth_id] エラー: {e}")
-    return None
+        return None
 
 
 async def create_product(data: dict) -> dict:
@@ -154,11 +164,14 @@ async def get_avatars(search: Optional[str] = None) -> list[dict]:
 
     # 各アバターの対応商品数を整数として付加する
     for item in res.data:
-        count_res = db.table("product_avatar_map") \
-            .select("product_id", count="exact") \
-            .eq("avatar_id", item["id"]) \
-            .execute()
-        item["product_count"] = count_res.count or 0
+        try:
+            count_res = db.table("product_avatar_map") \
+                .select("product_id", count="exact") \
+                .eq("avatar_id", item["id"]) \
+                .execute()
+            item["product_count"] = count_res.count or 0
+        except Exception:
+            item["product_count"] = 0
 
     return res.data
 
@@ -166,23 +179,31 @@ async def get_avatars(search: Optional[str] = None) -> list[dict]:
 async def get_avatar_by_id(avatar_id: str) -> Optional[dict]:
     """アバターIDでアバターを取得する"""
     db = get_db()
-    res = db.table("avatars") \
-        .select("*") \
-        .eq("id", avatar_id) \
-        .maybe_single() \
-        .execute()
-    return res.data
+    try:
+        res = db.table("avatars") \
+            .select("*") \
+            .eq("id", avatar_id) \
+            .limit(1) \
+            .execute()
+        return _first_or_none(res)
+    except Exception as e:
+        print(f"[get_avatar_by_id] エラー: {e}")
+        return None
 
 
 async def get_avatar_by_name(name: str) -> Optional[dict]:
     """アバター名（部分一致）でアバターを取得する"""
     db = get_db()
-    res = db.table("avatars") \
-        .select("*") \
-        .ilike("name", f"%{name}%") \
-        .maybe_single() \
-        .execute()
-    return res.data
+    try:
+        res = db.table("avatars") \
+            .select("*") \
+            .ilike("name", f"%{name}%") \
+            .limit(1) \
+            .execute()
+        return _first_or_none(res)
+    except Exception as e:
+        print(f"[get_avatar_by_name] エラー: {e}")
+        return None
 
 
 async def get_products_by_avatar(
@@ -308,13 +329,17 @@ async def get_avatar_ratings(product_id: str) -> list[dict]:
 async def has_user_reviewed(product_id: str, user_id: str) -> bool:
     """ユーザーがすでにレビューを投稿済みか確認する"""
     db = get_db()
-    res = db.table("reviews") \
-        .select("id") \
-        .eq("product_id", product_id) \
-        .eq("user_id", user_id) \
-        .maybe_single() \
-        .execute()
-    return res.data is not None
+    try:
+        res = db.table("reviews") \
+            .select("id") \
+            .eq("product_id", product_id) \
+            .eq("user_id", user_id) \
+            .limit(1) \
+            .execute()
+        return _first_or_none(res) is not None
+    except Exception as e:
+        print(f"[has_user_reviewed] エラー: {e}")
+        return False
 
 
 # ==========================================
@@ -330,8 +355,9 @@ async def get_crawl_progress(category: str) -> dict:
             .eq("category", category) \
             .limit(1) \
             .execute()
-        if res and res.data and len(res.data) > 0:
-            return res.data[0]
+        found = _first_or_none(res)
+        if found:
+            return found
     except Exception as e:
         print(f"[get_crawl_progress] エラー: {e}")
     return {"category": category, "last_page": 0, "total_collected": 0}
