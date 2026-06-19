@@ -321,6 +321,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         return;
     }
 
+    // 管理者ログイン中であれば「再収集」ボタンを表示する
+    initAdminRescrapeButton();
+
     // 並行してデータを取得
     try {
         const [product, priceData, reviewData] = await Promise.all([
