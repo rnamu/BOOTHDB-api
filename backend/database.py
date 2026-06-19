@@ -146,8 +146,32 @@ async def get_all_products_for_scrape() -> list[dict]:
 # ==========================================
 
 async def add_price_history(product_id: str, price: int) -> None:
-    """価格履歴を1件追加する"""
+    """
+    価格履歴を追加する。
+    直近の記録と同じ価格の場合は新しい点を追加せず、グラフが
+    「再収集のたびに点が増える」状態になるのを防ぐ。
+    価格が変動した場合のみ新しい点を記録する。
+    """
     db = get_db()
+    try:
+        latest = db.table("price_history") \
+            .select("price") \
+            .eq("product_id", product_id) \
+            .order("recorded_at", desc=True) \
+            .limit(1) \
+            .execute()
+
+        latest_price = None
+        if latest and latest.data and len(latest.data) > 0:
+            latest_price = latest.data[0]["price"]
+
+        if latest_price == price:
+            # 価格が変わっていなければ記録をスキップ
+            return
+    except Exception as e:
+        print(f"[add_price_history] 直近価格の確認エラー: {e}")
+        # 確認に失敗した場合は安全側に倒して記録する
+
     db.table("price_history").insert({
         "product_id": product_id,
         "price": price,
