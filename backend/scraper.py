@@ -415,60 +415,71 @@ def _extract_avatar_names(text: str) -> list[str]:
 def _extract_variations(soup: BeautifulSoup) -> list[dict]:
     """
     商品ページのバリエーション一覧（名前＋価格）を抽出する。
-    BOOTHのバリエーション選択UIは商品名見出しの直後、購入ボタンが並ぶ
-    エリア内にのみ存在する。ページ全体からliタグを拾うと、ページ下部の
-    「もち山金魚の他の商品」のようなおすすめ商品一覧（全く別の商品の
-    名前と価格）まで誤って拾ってしまうため、検索範囲を本文冒頭のみに
-    厳密に限定する。
+
+    BOOTHのバリエーション選択ブロックは以下の構造の繰り返しになっている:
+        [バリエーション名]
+        ダウンロード商品
+        ¥ 価格
+        [付随情報（ファイル名など、任意）]
+        カートに入れる
+        ギフトとして贈る
+
+    つまり「カートに入れる」の直前に出てくる ¥価格 行と、
+    そのさらに前にある名前行のペアだけを正として扱う。
+    ページ末尾のおすすめ商品一覧は「カートに入れる」を含まないため、
+    この方式なら誤検出しない。
 
     Returns:
         [{"name": "フルパック", "price": 5000, "sort_order": 0}, ...]
         バリエーションがない単一価格の商品の場合は空リストを返す。
     """
-    # 「カートに入れる」ボタンが最初に出現する位置までを購入エリアとみなす。
-    # BOOTHのバリエーション一覧は必ずこのエリア内（商品名見出し～最初のカート
-    # ボタン群の中）に収まっており、おすすめ商品一覧はその後ろに続く。
     full_text = soup.get_text(separator="\n")
+    lines = [l.strip() for l in full_text.split("\n") if l.strip()]
+
     cart_marker = "カートに入れる"
-    first_cart_idx = full_text.find(cart_marker)
-
-    if first_cart_idx == -1:
-        # 購入ボタンが見つからない場合は安全側に倒してバリエーションなし扱い
-        return []
-
-    # 最後の「カートに入れる」出現位置（複数バリエーションがある場合、
-    # 各バリエーションごとにボタンが繰り返されるため、最後の出現位置までを
-    # 購入エリアとして扱う。ただし安全のため最大2000文字に制限する。
-    last_cart_idx = full_text.rfind(cart_marker)
-    purchase_area_end = min(last_cart_idx + len(cart_marker), first_cart_idx + 2000)
-    purchase_area_text = full_text[:purchase_area_end]
-
-    yen_pattern = re.compile(r"[¥￥]\s*([\d,]+)")
-    skip_labels = {"ダウンロード商品", "カートに入れる", "ギフトとして贈る", "在庫なし", "在庫あり"}
-
-    # 購入エリアのテキストを行単位に分割し、「名前行 → 価格行」の対応を取る
-    lines = [l.strip() for l in purchase_area_text.split("\n") if l.strip()]
+    yen_pattern = re.compile(r"^[¥￥]\s*([\d,]+)$")
+    skip_labels = {"ダウンロード商品", "ギフトとして贈る", "在庫なし", "在庫あり", "カートに入れる"}
 
     variations: list[dict] = []
-    pending_name: Optional[str] = None
 
-    for line in lines:
-        if yen_pattern.match(line):
-            price = _parse_price_string(yen_pattern.match(line).group(1))
-            if price is not None and pending_name:
-                variations.append({
-                    "name": pending_name[:100],
-                    "price": price,
-                    "sort_order": len(variations),
-                })
-                pending_name = None
-        elif line in skip_labels:
+    for i, line in enumerate(lines):
+        if line != cart_marker:
             continue
-        else:
-            # バリエーション名候補として保持（直後に価格が来ることを期待）
-            pending_name = line
 
-    # 同名・同価格の重複を除去
+        # この「カートに入れる」より手前を遡り、最初に見つかる ¥価格 行を探す
+        price = None
+        price_idx = None
+        for j in range(i - 1, max(i - 8, -1), -1):
+            m = yen_pattern.match(lines[j])
+            if m:
+                price = _parse_price_string(m.group(1))
+                price_idx = j
+                break
+
+        if price is None or price_idx is None:
+            continue
+
+        # 価格行よりさらに手前を遡り、ラベルでも価格でもない最初の行を名前とする
+        name = None
+        for j in range(price_idx - 1, max(price_idx - 6, -1), -1):
+            candidate = lines[j]
+            if candidate in skip_labels:
+                continue
+            if yen_pattern.match(candidate):
+                continue
+            name = candidate
+            break
+
+        if not name:
+            continue
+
+        variations.append({
+            "name": name[:100],
+            "price": price,
+            "sort_order": len(variations),
+        })
+
+    # 同名・同価格の重複を除去（順序は維持）
     seen = set()
     unique_variations = []
     for v in variations:
@@ -476,6 +487,11 @@ def _extract_variations(soup: BeautifulSoup) -> list[dict]:
         if key not in seen:
             seen.add(key)
             unique_variations.append(v)
+
+    # 表示順は出現順を尊重するため反転（後ろから探索したため逆順になっている）
+    unique_variations.reverse()
+    for idx, v in enumerate(unique_variations):
+        v["sort_order"] = idx
 
     # バリエーションが1件以下の場合は「単一価格商品」とみなし空リストを返す
     if len(unique_variations) <= 1:
