@@ -322,17 +322,22 @@ def _extract_price(soup: BeautifulSoup) -> Optional[int]:
         except (json.JSONDecodeError, ValueError, TypeError):
             continue
 
-    # フォールバック: ページ全体から "¥ 数字" または "￥数字" パターンを正規表現で探す
-    # （価格表示要素のクラス名がBOOTH側の更新で変わっても対応できるようにする）
+    # フォールバック: ページ"上部"（おすすめ商品一覧より前の部分）から
+    # "¥ 数字" パターンを探す。ページ全体だと末尾のおすすめ商品欄の価格
+    # （時には ¥0 の利用規約ページなど）を誤って拾ってしまうため、
+    # 本文の先頭付近のみに絞り込む。
     page_text = soup.get_text()
+    # 最初の3000文字程度に限定（購入ボタン周辺の価格表示はこの範囲に収まる）
+    head_text = page_text[:3000]
     yen_pattern = re.compile(r"[¥￥]\s*([\d,]+)")
-    match = yen_pattern.search(page_text)
-    if match:
-        price = _parse_price_string(match.group(1))
+    matches = yen_pattern.findall(head_text)
+    for raw in matches:
+        price = _parse_price_string(raw)
         if price is not None and price > 0:
             return price
 
     return None
+
 
 
 def _parse_price_string(raw: Optional[str]) -> Optional[int]:
