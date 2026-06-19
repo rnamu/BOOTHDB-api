@@ -142,10 +142,19 @@ async def get_price_stats(product_id: str) -> dict:
 async def get_avatars(search: Optional[str] = None) -> list[dict]:
     """アバター一覧を取得する"""
     db = get_db()
-    query = db.table("avatars").select("*, product_count:product_avatar_map(count)")
+    query = db.table("avatars").select("*")
     if search:
         query = query.ilike("name", f"%{search}%")
     res = query.order("name").execute()
+
+    # 各アバターの対応商品数を整数として付加する
+    for item in res.data:
+        count_res = db.table("product_avatar_map") \
+            .select("product_id", count="exact") \
+            .eq("avatar_id", item["id"]) \
+            .execute()
+        item["product_count"] = count_res.count or 0
+
     return res.data
 
 
