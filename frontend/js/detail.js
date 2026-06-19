@@ -137,34 +137,6 @@ function renderVariations(variations) {
     }).join('');
 }
 
-function renderVariations(variations) {
-    const card = document.getElementById('variations-card');
-    const list = document.getElementById('variations-list');
-    if (!card || !list) return;
-
-    if (!variations || variations.length === 0) {
-        card.style.display = 'none';
-        return;
-    }
-
-    card.style.display = 'block';
-
-    const highest = Math.max(...variations.map(v => v.price));
-
-    list.innerHTML = variations.map(function (v) {
-        const isHighest = v.price === highest;
-        return `
-            <div class="variation-row">
-                <span class="variation-name">
-                    ${escapeHtml(v.name)}
-                    ${isHighest ? '<span class="variation-highest-badge">最高額</span>' : ''}
-                </span>
-                <span class="variation-price ${isHighest ? 'is-highest' : ''}">¥${v.price.toLocaleString()}</span>
-            </div>
-        `;
-    }).join('');
-}
-
 function renderProductInfo(product) {
     const set = (id, text) => {
         const el = document.getElementById(id);
