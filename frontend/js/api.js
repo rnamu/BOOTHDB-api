@@ -125,6 +125,11 @@ const ProductApi = {
         return apiFetch(`/api/products/${productId}/prices?limit=${limit}`);
     },
 
+    /** バリエーション一覧を取得 */
+    async getVariations(productId) {
+        return apiFetch(`/api/products/${productId}/variations`);
+    },
+
     /** レビュー一覧を取得 */
     async getReviews(productId, { page = 1, perPage = 20 } = {}) {
         const params = new URLSearchParams({ page, per_page: perPage });
