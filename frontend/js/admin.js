@@ -83,12 +83,10 @@ function initTabs() {
             const panelId = 'panel-' + tab.getAttribute('data-tab');
             document.getElementById(panelId).classList.add('active');
 
-            // タブに応じてデータを読み込む
             const tabName = tab.getAttribute('data-tab');
             if (tabName === 'products') loadAdminProducts();
             if (tabName === 'reviews')  loadAdminReviews();
             if (tabName === 'users')    loadAdminUsers();
-            if (tabName === 'avatars')  loadAdminAvatars();
             if (tabName === 'crawl')    loadCrawlStatus();
         });
     });
@@ -100,12 +98,12 @@ function initTabs() {
 
 async function loadAdminProducts() {
     const tbody = document.getElementById('products-tbody');
-    tbody.innerHTML = '<tr><td colspan="5" class="loading-spinner">読み込み中...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="loading-spinner">読み込み中...</td></tr>';
 
     try {
         const data = await adminFetch('/api/admin/products');
         if (!data.items || data.items.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="empty-message">商品がありません</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-message">商品がありません</td></tr>';
             return;
         }
 
@@ -116,6 +114,7 @@ async function loadAdminProducts() {
                 <tr>
                     <td class="td-title">${escapeHtml(p.title)}</td>
                     <td>${escapeHtml(p.creator_name || '-')}</td>
+                    <td>${escapeHtml(p.category || '未分類')}</td>
                     <td class="td-price">${price}</td>
                     <td class="td-date">${date}</td>
                     <td>
@@ -129,7 +128,7 @@ async function loadAdminProducts() {
             `;
         }).join('');
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" class="error-message">${escapeHtml(err.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="error-message">${escapeHtml(err.message)}</td></tr>`;
     }
 }
 
@@ -253,105 +252,6 @@ async function banUser(id, username) {
 }
 
 // ==========================================
-// アバター管理
-// ==========================================
-
-async function loadAdminAvatars() {
-    const tbody = document.getElementById('avatars-tbody');
-    tbody.innerHTML = '<tr><td colspan="4" class="loading-spinner">読み込み中...</td></tr>';
-
-    try {
-        const data = await adminFetch('/api/avatars');
-        if (!data.items || data.items.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="empty-message">アバターがありません</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = data.items.map(function (a) {
-            return `
-                <tr>
-                    <td style="font-weight: 800;">${escapeHtml(a.name)}</td>
-                    <td>${escapeHtml(a.name_en || '-')}</td>
-                    <td>${escapeHtml(a.creator || '-')}</td>
-                    <td>
-                        <div class="admin-action-btns">
-                            <button class="btn-edit" onclick="openEditAvatar('${escapeHtml(a.id)}', '${escapeHtml(a.name)}', '${escapeHtml(a.name_en || '')}', '${escapeHtml(a.creator || '')}')">編集</button>
-                            <button class="btn-delete" onclick="deleteAvatar('${escapeHtml(a.id)}', '${escapeHtml(a.name)}')">削除</button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-    } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="4" class="error-message">${escapeHtml(err.message)}</td></tr>`;
-    }
-}
-
-function openAddAvatar() {
-    document.getElementById('avatar-modal-title').textContent = 'アバターを追加';
-    document.getElementById('avatar-edit-id').value = '';
-    document.getElementById('avatar-name-input').value = '';
-    document.getElementById('avatar-name-en-input').value = '';
-    document.getElementById('avatar-creator-input').value = '';
-    document.getElementById('avatar-submit-btn').textContent = '追加する';
-    openModal('avatar-modal');
-}
-
-function openEditAvatar(id, name, nameEn, creator) {
-    document.getElementById('avatar-modal-title').textContent = 'アバターを編集';
-    document.getElementById('avatar-edit-id').value = id;
-    document.getElementById('avatar-name-input').value = name;
-    document.getElementById('avatar-name-en-input').value = nameEn;
-    document.getElementById('avatar-creator-input').value = creator;
-    document.getElementById('avatar-submit-btn').textContent = '更新する';
-    openModal('avatar-modal');
-}
-
-async function handleAvatarSubmit(e) {
-    e.preventDefault();
-    const id      = document.getElementById('avatar-edit-id').value;
-    const name    = document.getElementById('avatar-name-input').value.trim();
-    const nameEn  = document.getElementById('avatar-name-en-input').value.trim();
-    const creator = document.getElementById('avatar-creator-input').value.trim();
-    const btn     = document.getElementById('avatar-submit-btn');
-
-    btn.disabled = true;
-
-    try {
-        if (id) {
-            await adminFetch(`/api/admin/avatars/${id}`, {
-                method: 'PATCH',
-                body: JSON.stringify({ name, name_en: nameEn, creator }),
-            });
-            showToast('更新しました', 'success');
-        } else {
-            await adminFetch('/api/admin/avatars', {
-                method: 'POST',
-                body: JSON.stringify({ name, name_en: nameEn, creator }),
-            });
-            showToast('追加しました', 'success');
-        }
-        closeModal('avatar-modal');
-        loadAdminAvatars();
-    } catch (err) {
-        showToast(err.message, 'error');
-    } finally {
-        btn.disabled = false;
-    }
-}
-
-async function deleteAvatar(id, name) {
-    if (!confirm(`「${name}」を削除しますか？`)) return;
-    try {
-        await adminFetch(`/api/admin/avatars/${id}`, { method: 'DELETE' });
-        showToast('削除しました', 'success');
-        loadAdminAvatars();
-    } catch (err) {
-        showToast(err.message, 'error');
-    }
-}
-
-// ==========================================
 // 自動収集（クロール）管理
 // ==========================================
 
@@ -396,7 +296,6 @@ async function runCrawlNow() {
     try {
         const data = await adminFetch('/api/admin/crawl/run', { method: 'POST' });
         showToast(data.message || 'クロールを開始しました', 'success');
-        // 進捗を定期的に確認
         setTimeout(loadCrawlStatus, 3000);
     } catch (err) {
         showToast(err.message, 'error');
@@ -411,27 +310,15 @@ async function runCrawlNow() {
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', function () {
-    // すでにトークンがあればダッシュボードを表示
     if (getAdminToken()) {
         showDashboard();
     }
 
-    // ログインフォーム
     const loginForm = document.getElementById('admin-login-form');
     if (loginForm) loginForm.addEventListener('submit', handleAdminLogin);
 
-    // タブ初期化
     initTabs();
 
-    // アバター追加ボタン
-    const addBtn = document.getElementById('open-add-avatar-btn');
-    if (addBtn) addBtn.addEventListener('click', openAddAvatar);
-
-    // アバターフォーム
-    const avatarForm = document.getElementById('avatar-form');
-    if (avatarForm) avatarForm.addEventListener('submit', handleAvatarSubmit);
-
-    // クロール実行ボタン
     const runCrawlBtn = document.getElementById('run-crawl-btn');
     if (runCrawlBtn) runCrawlBtn.addEventListener('click', runCrawlNow);
 });

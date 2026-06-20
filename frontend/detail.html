@@ -22,7 +22,7 @@
                 <nav class="nav-links">
                     <a href="index.html"  class="nav-item" id="nav-top">ポータル</a>
                     <a href="detail.html" class="nav-item" id="nav-detail">商品分析</a>
-                    <a href="avatar.html" class="nav-item" id="nav-avatar">アバター別</a>
+                    <a href="index.html#sale-section" class="nav-item" id="nav-sale">セール中商品</a>
                 </nav>
                 <span class="nav-username" id="nav-username"></span>
                 <button class="nav-auth-btn nav-login-btn"  id="nav-login-btn">ログイン</button>
@@ -86,13 +86,26 @@
             <!-- サイドバー -->
             <aside class="detail-sidebar">
 
-                <!-- バリエーション一覧（複数価格パターンがある場合のみ表示） -->
+                <!-- バリエーション一覧 -->
                 <div class="card-base spec-card variations-card" id="variations-card" style="display: none;">
                     <h2 class="spec-card-title">販売バリエーション</h2>
                     <p class="spec-label" style="font-size: 0.75rem; margin-bottom: 0.75rem;">
-                        ※この商品には複数の価格パターンがあります。
+                        ※この商品の価格パターン一覧です。
                     </p>
                     <div class="variations-list" id="variations-list"></div>
+                </div>
+
+                <!-- 商品情報 -->
+                <div class="card-base spec-card">
+                    <h2 class="spec-card-title">商品情報</h2>
+                    <table class="spec-table">
+                        <tbody>
+                            <tr>
+                                <td class="spec-label">カテゴリ</td>
+                                <td class="spec-value" id="spec-category">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
             </aside>
@@ -104,7 +117,7 @@
                 <div class="card-base chart-card">
                     <div class="chart-header">
                         <h2 class="chart-title">過去の販売価格推移</h2>
-                        <p class="chart-desc">定期チェックによる価格変動ログ（最高額ベース）</p>
+                        <p class="chart-desc">定期チェックによる価格変動ログ（バリエーション別）</p>
                     </div>
                     <div class="chart-viewport">
                         <canvas id="price-chart" aria-label="価格推移グラフ" role="img"></canvas>
@@ -150,22 +163,15 @@
                         </div>
                     </div>
 
-                    <!-- レビュー一覧 -->
                     <div class="review-list" id="review-list">
                         <div class="loading-spinner">読み込み中...</div>
                     </div>
                 </div>
 
-                <!-- レビュー投稿フォーム -->
+                <!-- レビュー投稿フォーム（使用アバター項目なし） -->
                 <div class="card-base review-form-card">
                     <h2 class="chart-title" style="margin-bottom: 1rem;">レビューを投稿</h2>
                     <form id="review-form">
-                        <div class="form-group">
-                            <label class="form-label" for="review-avatar-select">使用アバター（必須）</label>
-                            <select class="form-input" id="review-avatar-select" required>
-                                <option value="">アバターを選択</option>
-                            </select>
-                        </div>
                         <div class="form-group">
                             <label class="form-label">評価（必須）</label>
                             <div class="star-rating-row">
@@ -178,7 +184,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="review-comment">コメント（任意）</label>
-                            <textarea class="form-input" id="review-comment" rows="3" placeholder="使用感やフィッティングのポイントなどを書いてみてください" style="resize: vertical;"></textarea>
+                            <textarea class="form-input" id="review-comment" rows="3" placeholder="使用感などを書いてみてください" style="resize: vertical;"></textarea>
                         </div>
                         <button type="submit" id="review-submit-btn" class="btn-primary">レビューを投稿</button>
                     </form>

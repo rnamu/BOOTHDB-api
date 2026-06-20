@@ -5,32 +5,36 @@
 'use strict';
 
 // ==========================================
-// API設定（デプロイ後にRenderのURLに変更）
+// API設定
 // ==========================================
 const API_BASE_URL = (() => {
-    // ローカル開発時は localhost:8000 を使用
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
         return 'http://localhost:8000';
     }
-    // 本番（GitHub Pages）では Render のURLを使用
-    // デプロイ後に自分のRenderのURLに変更してください
     return 'https://boothdb-api.onrender.com';
 })();
 
 
 // ==========================================
-// 認証トークン管理
+// 認証トークン管理（アクセストークン＋リフレッシュトークン）
 // ==========================================
 
 const Auth = {
     getToken() {
         return localStorage.getItem('boothdb_token');
     },
-    setToken(token) {
-        localStorage.setItem('boothdb_token', token);
+    getRefreshToken() {
+        return localStorage.getItem('boothdb_refresh_token');
+    },
+    setTokens(accessToken, refreshToken) {
+        localStorage.setItem('boothdb_token', accessToken);
+        if (refreshToken) {
+            localStorage.setItem('boothdb_refresh_token', refreshToken);
+        }
     },
     removeToken() {
         localStorage.removeItem('boothdb_token');
+        localStorage.removeItem('boothdb_refresh_token');
         localStorage.removeItem('boothdb_user');
     },
     getUser() {
@@ -47,22 +51,62 @@ const Auth = {
 
 
 // ==========================================
-// 共通フェッチ関数
+// 共通フェッチ関数（トークン自動更新つき）
 // ==========================================
 
+let isRefreshing = false;
+let refreshPromise = null;
+
 /**
- * APIリクエストを送信する共通関数
- * @param {string} path - APIパス（例: /api/products）
- * @param {object} options - fetchのオプション
- * @returns {Promise<any>} レスポンスデータ
+ * リフレッシュトークンを使ってアクセストークンを更新する。
+ * 同時に複数のリクエストが401になっても、リフレッシュ処理は1回だけ実行する。
  */
-async function apiFetch(path, options = {}) {
+async function refreshAccessToken() {
+    if (isRefreshing) {
+        return refreshPromise;
+    }
+
+    const refreshTok = Auth.getRefreshToken();
+    if (!refreshTok) {
+        return false;
+    }
+
+    isRefreshing = true;
+    refreshPromise = (async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refreshTok }),
+            });
+            if (!response.ok) {
+                Auth.removeToken();
+                return false;
+            }
+            const data = await response.json();
+            Auth.setTokens(data.access_token, data.refresh_token);
+            return true;
+        } catch (err) {
+            Auth.removeToken();
+            return false;
+        } finally {
+            isRefreshing = false;
+        }
+    })();
+
+    return refreshPromise;
+}
+
+/**
+ * APIリクエストを送信する共通関数。
+ * 401が返ってきた場合、リフレッシュトークンで自動的に再認証して1回だけリトライする。
+ */
+async function apiFetch(path, options = {}, _isRetry = false) {
     const headers = {
         'Content-Type': 'application/json',
         ...(options.headers || {}),
     };
 
-    // 認証トークンがあればヘッダーに付加
     const token = Auth.getToken();
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -73,8 +117,15 @@ async function apiFetch(path, options = {}) {
         headers,
     });
 
-    // 204 No Content
     if (response.status === 204) return null;
+
+    // トークン期限切れ → リフレッシュして1回だけ再試行
+    if (response.status === 401 && !_isRetry && Auth.getRefreshToken()) {
+        const refreshed = await refreshAccessToken();
+        if (refreshed) {
+            return apiFetch(path, options, true);
+        }
+    }
 
     const data = await response.json();
 
@@ -95,6 +146,18 @@ class ApiError extends Error {
 
 
 // ==========================================
+// カテゴリAPI
+// ==========================================
+
+const CategoryApi = {
+    /** 収集対象カテゴリ一覧を取得 */
+    async list() {
+        return apiFetch('/api/categories');
+    },
+};
+
+
+// ==========================================
 // 商品API
 // ==========================================
 
@@ -105,6 +168,16 @@ const ProductApi = {
         if (category) params.set('category', category);
         if (search) params.set('search', search);
         return apiFetch(`/api/products?${params}`);
+    },
+
+    /** 新着商品を取得 */
+    async listNew(limit = 6) {
+        return apiFetch(`/api/products/new?limit=${limit}`);
+    },
+
+    /** セール中商品を取得 */
+    async listSale(limit = 6) {
+        return apiFetch(`/api/products/sale?limit=${limit}`);
     },
 
     /** 商品詳細を取得 */
@@ -140,52 +213,20 @@ const ProductApi = {
         const params = new URLSearchParams({ page, per_page: perPage });
         return apiFetch(`/api/products/${productId}/reviews?${params}`);
     },
-
-    /** アバター別評価を取得 */
-    async getAvatarRatings(productId) {
-        return apiFetch(`/api/products/${productId}/reviews/avatars`);
-    },
 };
 
 
 // ==========================================
-// アバターAPI
-// ==========================================
-
-const AvatarApi = {
-    /** アバター一覧を取得 */
-    async list(search = null) {
-        const params = new URLSearchParams();
-        if (search) params.set('search', search);
-        return apiFetch(`/api/avatars?${params}`);
-    },
-
-    /** アバター詳細を取得 */
-    async get(avatarId) {
-        return apiFetch(`/api/avatars/${avatarId}`);
-    },
-
-    /** アバター対応商品一覧を取得 */
-    async getProducts(avatarId, { page = 1, perPage = 20, category = null, sort = 'popular' } = {}) {
-        const params = new URLSearchParams({ page, per_page: perPage, sort });
-        if (category) params.set('category', category);
-        return apiFetch(`/api/avatars/${avatarId}/products?${params}`);
-    },
-};
-
-
-// ==========================================
-// レビューAPI
+// レビューAPI（使用アバターなし）
 // ==========================================
 
 const ReviewApi = {
     /** レビューを投稿 */
-    async post({ productId, avatarId, rating, comment = null }) {
+    async post({ productId, rating, comment = null }) {
         return apiFetch('/api/reviews', {
             method: 'POST',
             body: JSON.stringify({
                 product_id: productId,
-                avatar_id: avatarId,
                 rating,
                 comment,
             }),
@@ -213,7 +254,7 @@ const AuthApi = {
             method: 'POST',
             body: JSON.stringify({ email, password }),
         });
-        Auth.setToken(data.access_token);
+        Auth.setTokens(data.access_token, data.refresh_token);
         Auth.setUser({ id: data.user_id, username: data.username });
         return data;
     },

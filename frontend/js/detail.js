@@ -6,18 +6,17 @@
 
 let activeChart = null;
 let currentProductId = null;
+let lastSeriesData = null;
 
-// ==========================================
-// グラフ描画
-// ==========================================
-
-// バリエーション線の色パレット（最大10色、それ以上は循環使用）
+// バリエーション線の色パレット
 const VARIATION_COLORS = [
     '#8b5cf6', '#06b6d4', '#f97316', '#ec4899', '#22c55e',
     '#eab308', '#3b82f6', '#ef4444', '#14b8a6', '#a855f7',
 ];
 
-let lastSeriesData = null;
+// ==========================================
+// グラフ描画（バリエーション別・複数線）
+// ==========================================
 
 function renderPriceChart(seriesData) {
     const canvas = document.getElementById('price-chart');
@@ -38,7 +37,6 @@ function renderPriceChart(seriesData) {
 
     lastSeriesData = seriesData;
 
-    // 全系統の日付を統合してX軸ラベルを作る（日付昇順・重複なし）
     const allDatesSet = new Set();
     variationNames.forEach(function (name) {
         seriesData[name].forEach(function (h) { allDatesSet.add(h.recorded_at); });
@@ -58,8 +56,6 @@ function renderPriceChart(seriesData) {
     const ttBody     = style.getPropertyValue('--chart-tooltip-body').trim();
     const ttBorder   = style.getPropertyValue('--chart-tooltip-border').trim();
 
-    // バリエーションごとにdatasetを作成。
-    // 日付が記録されていない箇所は直前の価格を引き継ぐ（階段状の表示にする）
     const datasets = variationNames.map(function (name, idx) {
         const color = VARIATION_COLORS[idx % VARIATION_COLORS.length];
         const history = seriesData[name];
@@ -140,7 +136,6 @@ function renderPriceChart(seriesData) {
         }
     });
 
-    // テーマ変更時にグラフを再描画
     new MutationObserver(function () {
         if (activeChart && lastSeriesData) renderPriceChart(lastSeriesData);
     }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
@@ -148,7 +143,7 @@ function renderPriceChart(seriesData) {
 
 
 // ==========================================
-// 商品情報の表示
+// バリエーション一覧の表示
 // ==========================================
 
 function renderVariations(variations) {
@@ -180,6 +175,11 @@ function renderVariations(variations) {
     }).join('');
 }
 
+
+// ==========================================
+// 商品情報の表示
+// ==========================================
+
 function renderProductInfo(product) {
     const set = (id, text) => {
         const el = document.getElementById(id);
@@ -189,13 +189,9 @@ function renderProductInfo(product) {
     set('breadcrumb-product', product.title);
     set('detail-title', product.title);
     set('detail-creator', product.creator_name || '-');
+    set('spec-category', product.category || '未分類');
     document.title = `${product.title} | BOOTHDB`;
 
-    // パンくずの商品名
-    const crumb = document.getElementById('breadcrumb-product');
-    if (crumb) crumb.textContent = product.title;
-
-    // サムネイル
     const thumb = document.getElementById('detail-thumb');
     if (thumb) {
         if (product.thumbnail_url) {
@@ -205,11 +201,9 @@ function renderProductInfo(product) {
         }
     }
 
-    // BOOTH公式リンク
     const boothLink = document.getElementById('booth-link');
     if (boothLink) boothLink.href = product.booth_url || '#';
 
-    // 価格
     const priceEl = document.getElementById('detail-price');
     if (priceEl && product.current_price != null) {
         priceEl.textContent = `¥${product.current_price.toLocaleString()}`;
@@ -243,14 +237,12 @@ function renderPriceStats(priceData) {
 // ==========================================
 
 function renderReviews(reviewData) {
-    // 平均評価
     const avgEl = document.getElementById('review-avg');
     if (avgEl) avgEl.textContent = reviewData.average_rating?.toFixed(1) ?? '-';
 
     const countEl = document.getElementById('review-count');
     if (countEl) countEl.textContent = reviewData.total;
 
-    // 分布バー
     const dist = reviewData.rating_distribution || {};
     const total = Object.values(dist).reduce((a, b) => a + b, 0);
     for (let i = 1; i <= 5; i++) {
@@ -262,7 +254,6 @@ function renderReviews(reviewData) {
         if (pct)  pct.textContent = `${percent}%`;
     }
 
-    // レビュー一覧
     const listEl = document.getElementById('review-list');
     if (!listEl) return;
 
@@ -287,7 +278,6 @@ function renderReviews(reviewData) {
                     </div>
                     <span class="review-date">${dateStr}</span>
                 </div>
-                ${r.avatar_name ? `<p class="review-avatar-tag">使用アバター: ${escapeHtml(r.avatar_name)}</p>` : ''}
                 ${r.comment ? `<p class="review-body">${escapeHtml(r.comment)}</p>` : ''}
             </div>
         `;
@@ -296,23 +286,8 @@ function renderReviews(reviewData) {
 
 
 // ==========================================
-// レビュー投稿フォーム
+// レビュー投稿フォーム（使用アバターなし）
 // ==========================================
-
-async function loadAvatarOptions() {
-    const select = document.getElementById('review-avatar-select');
-    if (!select) return;
-
-    try {
-        const data = await AvatarApi.list();
-        select.innerHTML = '<option value="">アバターを選択</option>'
-            + data.items.map(function (a) {
-                return `<option value="${escapeHtml(a.id)}">${escapeHtml(a.name)}</option>`;
-            }).join('');
-    } catch (err) {
-        console.error('アバター一覧取得エラー:', err);
-    }
-}
 
 async function handleReviewSubmit(e) {
     e.preventDefault();
@@ -322,13 +297,11 @@ async function handleReviewSubmit(e) {
         return;
     }
 
-    const avatarId = document.getElementById('review-avatar-select')?.value;
     const rating   = parseInt(document.querySelector('.star-btn.selected')?.getAttribute('data-rating') || '0');
     const comment  = document.getElementById('review-comment')?.value.trim() || null;
     const submitBtn = document.getElementById('review-submit-btn');
 
-    if (!avatarId) { showToast('使用アバターを選択してください', 'error'); return; }
-    if (!rating)   { showToast('評価（星）を選択してください', 'error'); return; }
+    if (!rating) { showToast('評価（星）を選択してください', 'error'); return; }
 
     submitBtn.disabled = true;
     submitBtn.textContent = '投稿中...';
@@ -336,12 +309,10 @@ async function handleReviewSubmit(e) {
     try {
         await ReviewApi.post({
             productId: currentProductId,
-            avatarId,
             rating,
             comment,
         });
         showToast('レビューを投稿しました！', 'success');
-        // レビュー再読み込み
         const reviewData = await ProductApi.getReviews(currentProductId);
         renderReviews(reviewData);
     } catch (err) {
@@ -362,7 +333,7 @@ function initStarButtons() {
     buttons.forEach(function (btn) {
         btn.addEventListener('click', function () {
             const rating = parseInt(btn.getAttribute('data-rating'));
-            buttons.forEach(function (b, i) {
+            buttons.forEach(function (b) {
                 b.classList.toggle('selected', parseInt(b.getAttribute('data-rating')) <= rating);
             });
         });
@@ -392,10 +363,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         return;
     }
 
-    // 管理者ログイン中であれば「再収集」ボタンを表示する
     await initAdminRescrapeButton();
 
-    // 並行してデータを取得
     try {
         const [product, priceData, priceSeriesData, reviewData, variationData] = await Promise.all([
             ProductApi.get(currentProductId),
@@ -416,29 +385,15 @@ document.addEventListener('DOMContentLoaded', async function () {
         console.error(err);
     }
 
-    // レビューフォーム初期化
-    await loadAvatarOptions();
     initStarButtons();
 
     const reviewForm = document.getElementById('review-form');
     if (reviewForm) reviewForm.addEventListener('submit', handleReviewSubmit);
-
-    // アバター行のクリック → アバターページへ
-    document.querySelectorAll('[data-avatar-link]').forEach(function (el) {
-        el.addEventListener('click', function () {
-            location.href = `avatar.html?id=${encodeURIComponent(el.getAttribute('data-avatar-link'))}`;
-        });
-    });
 });
 
 
 /**
  * 管理者専用「再収集」ボタンの初期化
- *
- * 2つの管理者ログイン経路に対応する:
- * 1. admin.html でパスワードログイン → sessionStorageの管理者トークンを使う
- * 2. index.html で admin@boothdb.com としてログイン → 通常のユーザートークンを使う
- *    （ユーザー名で管理者と判定する）
  */
 const ADMIN_EMAIL_WHITELIST = ['admin@boothdb.com'];
 
@@ -446,11 +401,9 @@ async function initAdminRescrapeButton() {
     const btn = document.getElementById('admin-rescrape-btn');
     if (!btn) return;
 
-    // 経路1: admin.html からのパスワードログイン
     const ADMIN_TOKEN_KEY = 'boothdb_admin_token';
     const adminPanelToken = sessionStorage.getItem(ADMIN_TOKEN_KEY);
 
-    // 経路2: index.html からの通常ログイン（admin@boothdb.com かどうか確認）
     let isAdminUser = false;
     if (Auth.isLoggedIn()) {
         try {
@@ -459,7 +412,7 @@ async function initAdminRescrapeButton() {
                 isAdminUser = true;
             }
         } catch (err) {
-            // トークン切れ等は無視してボタンを出さないだけにする
+            // 無視
         }
     }
 
@@ -476,26 +429,17 @@ async function initAdminRescrapeButton() {
         btn.textContent = '取得中...';
 
         try {
-            // 経路1のトークンがあればそちらを優先、なければ経路2の理由を使う
-            // （/api/admin/* エンドポイントは管理者トークン専用のため、
-            //   通常ユーザートークンでは直接呼べない。経路2の場合はサーバー側で
-            //   ユーザー権限による別ルートを使う）
             const headers = { 'Content-Type': 'application/json' };
-
             let endpoint = `${API_BASE_URL}/api/admin/products/${currentProductId}/rescrape`;
 
             if (adminPanelToken) {
                 headers['Authorization'] = `Bearer ${adminPanelToken}`;
             } else {
-                // 経路2: 通常のユーザートークンで、ユーザー権限用の再収集エンドポイントを呼ぶ
                 endpoint = `${API_BASE_URL}/api/products/${currentProductId}/rescrape`;
                 headers['Authorization'] = `Bearer ${Auth.getToken()}`;
             }
 
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers,
-            });
+            const response = await fetch(endpoint, { method: 'POST', headers });
             const data = await response.json();
             if (!response.ok) throw new Error(data.detail || '再取得に失敗しました');
 

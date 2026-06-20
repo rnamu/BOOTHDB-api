@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BOOTHDB - VRChat BOOTH データベース</title>
-    <meta name="description" content="VRChat向けBOOTH商品の価格履歴・対応アバター情報・レビューを閲覧できるデータベースサービス">
+    <meta name="description" content="VRChat向けBOOTH商品の価格履歴・レビューを閲覧できるデータベースサービス">
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/top.css">
     <link rel="stylesheet" href="css/modal.css">
@@ -22,7 +22,7 @@
                 <nav class="nav-links">
                     <a href="index.html"  class="nav-item" id="nav-top">ポータル</a>
                     <a href="detail.html" class="nav-item" id="nav-detail">商品分析</a>
-                    <a href="avatar.html" class="nav-item" id="nav-avatar">アバター別</a>
+                    <a href="index.html#sale-section" class="nav-item" id="nav-sale">セール中商品</a>
                 </nav>
                 <span class="nav-username" id="nav-username"></span>
                 <button class="nav-auth-btn nav-login-btn"  id="nav-login-btn">ログイン</button>
@@ -38,20 +38,15 @@
         <!-- ヒーローバナー -->
         <section class="hero-banner">
             <h1 class="hero-title">VRChat向けBOOTH 総合データベース</h1>
-            <p class="hero-subtitle">リアルタイムの価格推移と各人気アバター対応の適合情報をトラッキング</p>
+            <p class="hero-subtitle">リアルタイムの価格推移と商品情報をトラッキング</p>
 
             <div class="search-wrap">
                 <span class="search-icon">🔍</span>
-                <input type="search" id="search-input" class="search-input" placeholder="商品名、クリエイター、アバター名を検索..." aria-label="商品を検索">
+                <input type="search" id="search-input" class="search-input" placeholder="商品名、クリエイター名で検索..." aria-label="商品を検索">
             </div>
 
-            <div class="category-chips">
+            <div class="category-chips" id="category-chips">
                 <button class="category-chip active" data-category="">🔥 すべて表示</button>
-                <button class="category-chip" data-category="衣装">👗 衣装・服飾</button>
-                <button class="category-chip" data-category="ヘア">💇 髪型・ヘア</button>
-                <button class="category-chip" data-category="メイク">💄 メイク・瞳</button>
-                <button class="category-chip" data-category="アクセサリー">💍 アクセサリー</button>
-                <button class="category-chip" data-category="ワールド">🏠 ワールド・3D</button>
             </div>
 
             <!-- 商品URL登録（ログイン後に利用可能） -->
@@ -76,10 +71,30 @@
                 <div class="stats-label">総レビュー件数</div>
             </div>
             <div class="stats-box">
-                <div class="stats-num" id="stat-avatars">-</div>
-                <div class="stats-label">対応アバター数</div>
+                <div class="stats-num" id="stat-categories">7</div>
+                <div class="stats-label">対応カテゴリ数</div>
             </div>
         </div>
+
+        <!-- 新着商品 -->
+        <section class="section-block">
+            <div class="section-bar">
+                <h2 class="section-title">新着商品</h2>
+            </div>
+            <div class="grid-3" id="new-products-grid">
+                <div class="loading-spinner">読み込み中...</div>
+            </div>
+        </section>
+
+        <!-- セール中商品 -->
+        <section class="section-block" id="sale-section">
+            <div class="section-bar">
+                <h2 class="section-title">セール中商品</h2>
+            </div>
+            <div class="grid-3" id="sale-products-grid">
+                <div class="loading-spinner">読み込み中...</div>
+            </div>
+        </section>
 
         <!-- 商品一覧 -->
         <section class="section-block">
@@ -87,17 +102,6 @@
                 <h2 class="section-title">登録商品一覧</h2>
             </div>
             <div class="grid-3" id="products-grid">
-                <div class="loading-spinner">読み込み中...</div>
-            </div>
-        </section>
-
-        <!-- 人気アバター -->
-        <section class="section-block">
-            <div class="section-bar">
-                <h2 class="section-title">人気のアバターデータベース</h2>
-                <a href="avatar.html" class="section-link">すべて見る ↗</a>
-            </div>
-            <div class="avatar-grid" id="avatars-grid">
                 <div class="loading-spinner">読み込み中...</div>
             </div>
         </section>
@@ -120,7 +124,6 @@
                 <button class="auth-tab" id="tab-register">新規登録</button>
             </div>
 
-            <!-- ログインフォーム -->
             <form id="form-login">
                 <div class="form-group">
                     <label class="form-label" for="login-email">メールアドレス</label>
@@ -133,7 +136,6 @@
                 <button type="submit" class="btn-primary form-submit-btn">ログイン</button>
             </form>
 
-            <!-- 登録フォーム -->
             <form id="form-register" style="display: none;">
                 <div class="form-group">
                     <label class="form-label" for="register-username">ユーザー名（2〜20文字）</label>

@@ -4,14 +4,14 @@
 
 'use strict';
 
-// ==========================================
-// 商品一覧の読み込みと表示
-// ==========================================
-
 let currentPage = 1;
 let currentCategory = null;
 let currentSearch = null;
 let isLoading = false;
+
+// ==========================================
+// 商品一覧の読み込みと表示
+// ==========================================
 
 async function loadProducts() {
     if (isLoading) return;
@@ -20,7 +20,6 @@ async function loadProducts() {
     const grid = document.getElementById('products-grid');
     if (!grid) return;
 
-    // ローディング表示
     grid.innerHTML = '<div class="loading-spinner">読み込み中...</div>';
 
     try {
@@ -38,13 +37,11 @@ async function loadProducts() {
 
         grid.innerHTML = data.items.map(buildProductCardHTML).join('');
 
-        // カードのクリックイベントを付加
         grid.querySelectorAll('[data-product-id]').forEach(function (card) {
             card.addEventListener('click', function () {
                 const id = card.getAttribute('data-product-id');
                 location.href = `detail.html?id=${encodeURIComponent(id)}`;
             });
-            // Enterキーでも遷移
             card.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') card.click();
             });
@@ -59,46 +56,60 @@ async function loadProducts() {
 
 
 // ==========================================
-// アバター一覧の読み込みと表示
+// 新着商品の読み込みと表示
 // ==========================================
 
-async function loadAvatars() {
-    const grid = document.getElementById('avatars-grid');
+async function loadNewProducts() {
+    const grid = document.getElementById('new-products-grid');
     if (!grid) return;
 
     try {
-        const data = await AvatarApi.list();
-        if (!data.items || data.items.length === 0) return;
+        const data = await ProductApi.listNew(6);
+        if (!data.items || data.items.length === 0) {
+            grid.innerHTML = '<p class="empty-message">まだ新着商品がありません</p>';
+            return;
+        }
 
-        const colorClasses = ['color-purple', 'color-cyan', 'color-pink', 'color-orange'];
+        grid.innerHTML = data.items.map(buildProductCardHTML).join('');
 
-        grid.innerHTML = data.items.slice(0, 6).map(function (avatar, i) {
-            const colorClass = colorClasses[i % colorClasses.length];
-            const initial = avatar.name.charAt(0);
-            const count = avatar.product_count ?? '-';
-            return `
-                <article class="card-base card-interactive avatar-card" data-avatar-id="${escapeHtml(avatar.id)}" role="button" tabindex="0">
-                    <div class="avatar-icon ${colorClass}">${escapeHtml(initial)}</div>
-                    <div>
-                        <div class="avatar-card-info-name">${escapeHtml(avatar.name)}</div>
-                        <div class="avatar-card-info-count">対応商品数: ${count}件</div>
-                    </div>
-                </article>
-            `;
-        }).join('');
-
-        grid.querySelectorAll('[data-avatar-id]').forEach(function (card) {
+        grid.querySelectorAll('[data-product-id]').forEach(function (card) {
             card.addEventListener('click', function () {
-                const id = card.getAttribute('data-avatar-id');
-                location.href = `avatar.html?id=${encodeURIComponent(id)}`;
-            });
-            card.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') card.click();
+                location.href = `detail.html?id=${encodeURIComponent(card.getAttribute('data-product-id'))}`;
             });
         });
-
     } catch (err) {
-        console.error('アバター読み込みエラー:', err);
+        console.error('新着商品読み込みエラー:', err);
+    }
+}
+
+
+// ==========================================
+// セール中商品の読み込みと表示
+// ==========================================
+
+async function loadSaleProducts() {
+    const grid = document.getElementById('sale-products-grid');
+    if (!grid) return;
+
+    try {
+        const data = await ProductApi.listSale(6);
+        if (!data.items || data.items.length === 0) {
+            grid.innerHTML = '<p class="empty-message">現在セール中の商品はありません</p>';
+            return;
+        }
+
+        grid.innerHTML = data.items.map(function (p) {
+            // セール中商品はoriginal_priceを使ってカードに割引表示する
+            return buildProductCardHTML({ ...p, original_price: p.original_price });
+        }).join('');
+
+        grid.querySelectorAll('[data-product-id]').forEach(function (card) {
+            card.addEventListener('click', function () {
+                location.href = `detail.html?id=${encodeURIComponent(card.getAttribute('data-product-id'))}`;
+            });
+        });
+    } catch (err) {
+        console.error('セール商品読み込みエラー:', err);
     }
 }
 
@@ -132,11 +143,17 @@ async function handleRegister(e) {
         showToast(`「${product.title}」を登録しました！`, 'success');
         closeModal('register-modal');
         input.value = '';
-        // 一覧を再読み込み
         currentPage = 1;
         await loadProducts();
     } catch (err) {
-        showToast(err.message || '登録に失敗しました', 'error');
+        if (err.status === 401) {
+            showToast('ログインの有効期限が切れました。再度ログインしてください', 'error');
+            Auth.removeToken();
+            updateAuthUI();
+            openModal('auth-modal');
+        } else {
+            showToast(err.message || '登録に失敗しました', 'error');
+        }
     } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = '商品を登録する';
@@ -161,8 +178,28 @@ function handleSearch(e) {
 
 
 // ==========================================
-// カテゴリチップ
+// カテゴリチップ（BOOTHの実際のカテゴリ）
 // ==========================================
+
+async function loadCategoryChips() {
+    const container = document.getElementById('category-chips');
+    if (!container) return;
+
+    try {
+        const data = await CategoryApi.list();
+        const categories = data.items || [];
+
+        const allChip = `<button class="category-chip active" data-category="">🔥 すべて表示</button>`;
+        const chips = categories.map(function (cat) {
+            return `<button class="category-chip" data-category="${escapeHtml(cat)}">${escapeHtml(cat)}</button>`;
+        }).join('');
+
+        container.innerHTML = allChip + chips;
+        initCategoryChips();
+    } catch (err) {
+        console.error('カテゴリ読み込みエラー:', err);
+    }
+}
 
 function initCategoryChips() {
     const chips = document.querySelectorAll('.category-chip');
@@ -183,21 +220,19 @@ function initCategoryChips() {
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', async function () {
-    // 商品一覧・アバター一覧を並行読み込み
-    await Promise.all([loadProducts(), loadAvatars()]);
+    await Promise.all([
+        loadProducts(),
+        loadNewProducts(),
+        loadSaleProducts(),
+        loadCategoryChips(),
+    ]);
 
-    // 検索入力
     const searchInput = document.getElementById('search-input');
     if (searchInput) searchInput.addEventListener('input', handleSearch);
 
-    // カテゴリチップ
-    initCategoryChips();
-
-    // 商品登録フォーム
     const registerForm = document.getElementById('register-form');
     if (registerForm) registerForm.addEventListener('submit', handleRegister);
 
-    // 商品登録ボタン → モーダルを開く
     const registerOpenBtn = document.getElementById('open-register-btn');
     if (registerOpenBtn) {
         registerOpenBtn.addEventListener('click', function () {

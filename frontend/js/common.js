@@ -37,7 +37,6 @@ function setActiveNav() {
         'index.html': 'nav-top',
         '':           'nav-top',
         'detail.html': 'nav-detail',
-        'avatar.html': 'nav-avatar',
     };
     const id = map[filename];
     if (id) {
