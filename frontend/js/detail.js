@@ -350,7 +350,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // 管理者ログイン中であれば「再収集」ボタンを表示する
-    initAdminRescrapeButton();
+    await initAdminRescrapeButton();
 
     // 並行してデータを取得
     try {
@@ -390,15 +390,36 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 /**
  * 管理者専用「再収集」ボタンの初期化
- * sessionStorageに管理者トークンがある場合のみボタンを表示する
+ *
+ * 2つの管理者ログイン経路に対応する:
+ * 1. admin.html でパスワードログイン → sessionStorageの管理者トークンを使う
+ * 2. index.html で admin@boothdb.com としてログイン → 通常のユーザートークンを使う
+ *    （ユーザー名で管理者と判定する）
  */
-function initAdminRescrapeButton() {
-    const ADMIN_TOKEN_KEY = 'boothdb_admin_token';
-    const adminToken = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+const ADMIN_EMAIL_WHITELIST = ['admin@boothdb.com'];
+
+async function initAdminRescrapeButton() {
     const btn = document.getElementById('admin-rescrape-btn');
     if (!btn) return;
 
-    if (!adminToken) {
+    // 経路1: admin.html からのパスワードログイン
+    const ADMIN_TOKEN_KEY = 'boothdb_admin_token';
+    const adminPanelToken = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+
+    // 経路2: index.html からの通常ログイン（admin@boothdb.com かどうか確認）
+    let isAdminUser = false;
+    if (Auth.isLoggedIn()) {
+        try {
+            const me = await AuthApi.me();
+            if (me && ADMIN_EMAIL_WHITELIST.includes((me.email || '').toLowerCase())) {
+                isAdminUser = true;
+            }
+        } catch (err) {
+            // トークン切れ等は無視してボタンを出さないだけにする
+        }
+    }
+
+    if (!adminPanelToken && !isAdminUser) {
         btn.style.display = 'none';
         return;
     }
@@ -411,18 +432,30 @@ function initAdminRescrapeButton() {
         btn.textContent = '取得中...';
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/admin/products/${currentProductId}/rescrape`, {
+            // 経路1のトークンがあればそちらを優先、なければ経路2の理由を使う
+            // （/api/admin/* エンドポイントは管理者トークン専用のため、
+            //   通常ユーザートークンでは直接呼べない。経路2の場合はサーバー側で
+            //   ユーザー権限による別ルートを使う）
+            const headers = { 'Content-Type': 'application/json' };
+
+            let endpoint = `${API_BASE_URL}/api/admin/products/${currentProductId}/rescrape`;
+
+            if (adminPanelToken) {
+                headers['Authorization'] = `Bearer ${adminPanelToken}`;
+            } else {
+                // 経路2: 通常のユーザートークンで、ユーザー権限用の再収集エンドポイントを呼ぶ
+                endpoint = `${API_BASE_URL}/api/products/${currentProductId}/rescrape`;
+                headers['Authorization'] = `Bearer ${Auth.getToken()}`;
+            }
+
+            const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${adminToken}`,
-                },
+                headers,
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.detail || '再取得に失敗しました');
 
             showToast('情報を更新しました', 'success');
-            // ページの表示を更新するため再読み込み
             location.reload();
         } catch (err) {
             showToast(err.message, 'error');
