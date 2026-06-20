@@ -45,7 +45,7 @@
         <article class="card-base detail-header">
             <div class="detail-thumb" id="detail-thumb">読み込み中...</div>
             <div class="detail-info">
-                <span class="detail-badge">価格追跡中 ✔</span>
+                <span class="detail-badge" id="detail-category-badge">読み込み中...</span>
                 <h1 class="detail-title" id="detail-title">読み込み中...</h1>
                 <p class="detail-creator">
                     ブランド: <span class="detail-creator-link" id="detail-creator">-</span>
@@ -86,26 +86,15 @@
             <!-- サイドバー -->
             <aside class="detail-sidebar">
 
-                <!-- バリエーション一覧 -->
-                <div class="card-base spec-card variations-card" id="variations-card" style="display: none;">
+                <!-- バリエーション一覧（枠は常に表示、中身だけ後から読み込む） -->
+                <div class="card-base spec-card variations-card" id="variations-card">
                     <h2 class="spec-card-title">販売バリエーション</h2>
                     <p class="spec-label" style="font-size: 0.75rem; margin-bottom: 0.75rem;">
                         ※この商品の価格パターン一覧です。
                     </p>
-                    <div class="variations-list" id="variations-list"></div>
-                </div>
-
-                <!-- 商品情報 -->
-                <div class="card-base spec-card">
-                    <h2 class="spec-card-title">商品情報</h2>
-                    <table class="spec-table">
-                        <tbody>
-                            <tr>
-                                <td class="spec-label">カテゴリ</td>
-                                <td class="spec-value" id="spec-category">-</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="variations-list" id="variations-list">
+                        <div class="loading-spinner" style="padding: 1rem;">読み込み中...</div>
+                    </div>
                 </div>
 
             </aside>
