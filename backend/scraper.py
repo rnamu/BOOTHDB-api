@@ -416,7 +416,14 @@ def _extract_category(soup: BeautifulSoup) -> Optional[str]:
     # pixiv-icon要素のShadow DOM構文(<template shadowrootmode="open">)が
     # 親要素を起点にした子孫検索を阻害するケースがあるため、
     # soup全体から直接探すことで回避する。
+    all_breadcrumb_containers = soup.select("#js-item-category-breadcrumbs")
+    print(f"[DEBUG] #js-item-category-breadcrumbs 要素数: {len(all_breadcrumb_containers)}")
+    for idx, container in enumerate(all_breadcrumb_containers):
+        container_links = container.select("a")
+        print(f"[DEBUG] コンテナ{idx}: links={[l.get_text(strip=True) for l in container_links]}")
+
     links = soup.select("#js-item-category-breadcrumbs a")
+    print(f"[DEBUG] soup全体からのlinks: {[l.get_text(strip=True) for l in links]}")
     if links:
         first_category = links[0].get_text(strip=True)
         if first_category:
