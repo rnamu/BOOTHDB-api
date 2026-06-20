@@ -267,8 +267,13 @@ async def post_review(
         raise HTTPException(status_code=409, detail="この商品にはすでにレビューを投稿済みです")
 
     db = get_db()
-    profile_res = db.table("profiles").select("username").eq("id", user["id"]).maybe_single().execute()
-    username = (profile_res.data or {}).get("username", "匿名ユーザー")
+    username = "匿名ユーザー"
+    try:
+        profile_res = db.table("profiles").select("username").eq("id", user["id"]).limit(1).execute()
+        if profile_res and profile_res.data and len(profile_res.data) > 0:
+            username = profile_res.data[0].get("username", "匿名ユーザー")
+    except Exception as e:
+        print(f"[post_review] プロフィール取得エラー: {e}")
 
     review_data = {
         "id": str(uuid.uuid4()),
