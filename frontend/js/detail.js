@@ -155,18 +155,11 @@ function renderVariations(variations) {
         return;
     }
 
-    const isMultiple = variations.length > 1;
-    const highest = isMultiple ? Math.max(...variations.map(v => v.price)) : null;
-
     list.innerHTML = variations.map(function (v) {
-        const isHighest = isMultiple && v.price === highest;
         return `
             <div class="variation-row">
-                <span class="variation-name">
-                    ${escapeHtml(v.name)}
-                    ${isHighest ? '<span class="variation-highest-badge">最高額</span>' : ''}
-                </span>
-                <span class="variation-price ${isHighest ? 'is-highest' : ''}">¥${v.price.toLocaleString()}</span>
+                <span class="variation-name">${escapeHtml(v.name)}</span>
+                <span class="variation-price">¥${v.price.toLocaleString()}</span>
             </div>
         `;
     }).join('');
