@@ -120,9 +120,14 @@ const ProductApi = {
         });
     },
 
-    /** 価格履歴を取得 */
+    /** 価格履歴を取得（後方互換用） */
     async getPriceHistory(productId, limit = 90) {
         return apiFetch(`/api/products/${productId}/prices?limit=${limit}`);
+    },
+
+    /** バリエーションごとの価格履歴を取得 */
+    async getPriceHistoryByVariation(productId, limitPerVariation = 90) {
+        return apiFetch(`/api/products/${productId}/prices/by-variation?limit_per_variation=${limitPerVariation}`);
     },
 
     /** バリエーション一覧を取得 */
