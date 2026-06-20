@@ -145,21 +145,27 @@ async def get_all_products_for_scrape() -> list[dict]:
 # 価格履歴操作
 # ==========================================
 
-async def add_price_history(product_id: str, price: int) -> None:
+async def add_price_history(product_id: str, price: int, variation_name: Optional[str] = None) -> None:
     """
     価格履歴を追加する。
-    直近の記録と同じ価格の場合は新しい点を追加せず、グラフが
-    「再収集のたびに点が増える」状態になるのを防ぐ。
+    直近の記録（同じバリエーション名）と同じ価格の場合は新しい点を追加せず、
+    グラフが「再収集のたびに点が増える」状態になるのを防ぐ。
     価格が変動した場合のみ新しい点を記録する。
+
+    variation_name: バリエーション名。Noneの場合は単一価格商品扱い。
     """
     db = get_db()
     try:
-        latest = db.table("price_history") \
+        query = db.table("price_history") \
             .select("price") \
-            .eq("product_id", product_id) \
-            .order("recorded_at", desc=True) \
-            .limit(1) \
-            .execute()
+            .eq("product_id", product_id)
+
+        if variation_name is not None:
+            query = query.eq("variation_name", variation_name)
+        else:
+            query = query.is_("variation_name", "null")
+
+        latest = query.order("recorded_at", desc=True).limit(1).execute()
 
         latest_price = None
         if latest and latest.data and len(latest.data) > 0:
@@ -175,12 +181,22 @@ async def add_price_history(product_id: str, price: int) -> None:
     db.table("price_history").insert({
         "product_id": product_id,
         "price": price,
+        "variation_name": variation_name,
         "recorded_at": datetime.utcnow().isoformat(),
     }).execute()
 
 
+async def add_price_history_for_variations(product_id: str, variations: list[dict]) -> None:
+    """
+    商品の全バリエーション分の価格履歴をまとめて記録する。
+    variations: [{"name": "フルパック", "price": 5000}, ...]
+    """
+    for v in variations:
+        await add_price_history(product_id, v["price"], variation_name=v["name"])
+
+
 async def get_price_history(product_id: str, limit: int = 90) -> list[dict]:
-    """商品の価格履歴を取得する（最新limit件）"""
+    """商品の価格履歴を取得する（最新limit件、単一価格商品の後方互換用）"""
     db = get_db()
     res = db.table("price_history") \
         .select("price, recorded_at") \
@@ -191,8 +207,50 @@ async def get_price_history(product_id: str, limit: int = 90) -> list[dict]:
     return res.data
 
 
+async def get_price_history_by_variation(product_id: str, limit_per_variation: int = 90) -> dict:
+    """
+    商品の価格履歴を「バリエーション名ごと」にグループ化して取得する。
+
+    Returns:
+        {
+            "フルパック": [{"price": 5000, "recorded_at": "..."}, ...],
+            "マヌカ": [{"price": 2300, "recorded_at": "..."}, ...],
+            ...
+        }
+        バリエーションのない単一価格商品の場合は、商品名（または"価格"）を
+        キーとした1系統のデータを返す。
+    """
+    db = get_db()
+    try:
+        res = db.table("price_history") \
+            .select("price, recorded_at, variation_name") \
+            .eq("product_id", product_id) \
+            .order("recorded_at", desc=False) \
+            .limit(limit_per_variation * 20) \
+            .execute()
+    except Exception as e:
+        print(f"[get_price_history_by_variation] エラー: {e}")
+        return {}
+
+    grouped: dict[str, list[dict]] = {}
+    for row in (res.data or []):
+        key = row.get("variation_name") or "価格"
+        grouped.setdefault(key, [])
+        if len(grouped[key]) < limit_per_variation:
+            grouped[key].append({
+                "price": row["price"],
+                "recorded_at": row["recorded_at"],
+            })
+
+    return grouped
+
+
 async def get_price_stats(product_id: str) -> dict:
-    """最安値・最高値・平均値を取得する"""
+    """
+    最安値・最高値・平均値を取得する。
+    バリエーションがある商品の場合、全バリエーションの全履歴を横断して計算する
+    （「最安値」はどのバリエーションでも構わずその商品で過去最も安かった額）。
+    """
     db = get_db()
     res = db.table("price_history") \
         .select("price, recorded_at") \
