@@ -417,9 +417,11 @@ def _extract_category(soup: BeautifulSoup) -> Optional[str]:
     # 親要素を起点にした子孫検索を阻害するケースがあるため、
     # soup全体から直接探すことで回避する。
     links = soup.select("#js-item-category-breadcrumbs a")
+    print(f"[DEBUG-A] links={[l.get_text(strip=True) for l in links]}")
     if links:
         first_category = links[0].get_text(strip=True)
         if first_category:
+            print(f"[DEBUG-A] 経路Aで確定: {first_category}")
             return CATEGORY_NORMALIZE_MAP.get(first_category, first_category)
 
     # lxmlパーサーがpixiv-icon要素のShadow DOM構文(<template shadowrootmode="open">)
@@ -432,21 +434,26 @@ def _extract_category(soup: BeautifulSoup) -> Optional[str]:
         html_str,
         re.DOTALL,
     )
+    print(f"[DEBUG-B] container_match={container_match is not None}")
     if container_match:
         from bs4 import BeautifulSoup as BS
         sub_soup = BS(container_match.group(0), "html.parser")
         sub_links = sub_soup.select("a")
+        print(f"[DEBUG-B] sub_links={[l.get_text(strip=True) for l in sub_links]}")
         if sub_links:
             first_category = sub_links[0].get_text(strip=True)
             if first_category:
+                print(f"[DEBUG-B] 経路Bで確定: {first_category}")
                 return CATEGORY_NORMALIZE_MAP.get(first_category, first_category)
 
     # さらなるフォールバック: hrefが/browse/を含むリンクをページ全体から探す
     # （js-item-category-breadcrumbsの構造自体が変わっていた場合の保険）
     browse_links = soup.select("a[href*='/browse/']")
+    print(f"[DEBUG-C] browse_links先頭5件={[l.get_text(strip=True) for l in browse_links[:5]]}")
     if browse_links:
         first_category = browse_links[0].get_text(strip=True)
         if first_category:
+            print(f"[DEBUG-C] 経路Cで確定: {first_category}")
             return CATEGORY_NORMALIZE_MAP.get(first_category, first_category)
 
     # フォールバック1: 一般的なbreadcrumbクラス
@@ -454,6 +461,7 @@ def _extract_category(soup: BeautifulSoup) -> Optional[str]:
     if len(breadcrumb) >= 2:
         text = breadcrumb[-2].get_text(strip=True)
         if text:
+            print(f"[DEBUG-D] 経路Dで確定: {text}")
             return CATEGORY_NORMALIZE_MAP.get(text, text)
 
     # フォールバック2: タグ要素
@@ -461,29 +469,32 @@ def _extract_category(soup: BeautifulSoup) -> Optional[str]:
     if tag_el:
         text = tag_el.get_text(strip=True)
         if text:
+            print(f"[DEBUG-E] 経路Eで確定: {text}")
             return CATEGORY_NORMALIZE_MAP.get(text, text)
 
     # フォールバック3: 正規表現で直接HTML文字列からカテゴリリンクを抜き出す
     # （lxmlパーサーがpixiv-icon要素周辺の構造を壊している場合の最終手段）
     html_str = str(soup)
-    container_match = re.search(
+    container_match2 = re.search(
         r'id="js-item-category-breadcrumbs".*?</nav>',
         html_str,
         re.DOTALL,
     )
-    if container_match:
-        container_html = container_match.group(0)
+    if container_match2:
+        container_html = container_match2.group(0)
         href_matches = re.findall(
             r'<a[^>]*href="[^"]*?/browse/[^"]*"[^>]*>([^<]+)</a>',
             container_html,
         )
+        print(f"[DEBUG-F] href_matches={href_matches}")
         if href_matches:
             first_category = href_matches[0].strip()
             if first_category:
+                print(f"[DEBUG-F] 経路Fで確定: {first_category}")
                 return CATEGORY_NORMALIZE_MAP.get(first_category, first_category)
 
+    print(f"[DEBUG-G] すべての経路で取得失敗、Noneを返す")
     return None
-
 
 def _extract_variations(soup: BeautifulSoup) -> list[dict]:
     """
