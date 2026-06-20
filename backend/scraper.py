@@ -401,10 +401,11 @@ def _extract_category(soup: BeautifulSoup) -> Optional[str]:
     （将来別カテゴリも収集対象にしたときに備えるため）。
     """
     breadcrumb_container = soup.select_one("#js-item-category-breadcrumbs")
+    print(f"[DEBUG _extract_category] breadcrumb_container found: {breadcrumb_container is not None}")
     if breadcrumb_container:
         links = breadcrumb_container.select("a")
+        print(f"[DEBUG _extract_category] links found: {len(links)}, texts: {[l.get_text(strip=True) for l in links]}")
         if links:
-            # 最初のリンクが最上位カテゴリ（例: 3Dモデル）
             first_category = links[0].get_text(strip=True)
             if first_category:
                 return CATEGORY_NORMALIZE_MAP.get(first_category, first_category)
